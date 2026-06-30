@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>StokSync v4.0 — RDI Warehouse</title>
+<meta name="theme-color" content="#1A2332">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StokSync">
+<link rel="manifest" id="pwa-manifest">
+<style>
+:root {
+  --bg:#F5F6F8;--card:#FFF;--navy:#1A2332;--navy2:#243044;
+  --blue:#1565C0;--blue-lt:#E3EEF9;--blue-dk:#0D3F7A;
+  --green:#2E7D32;--green-lt:#E8F5E9;
+  --warn:#E65100;--warn-lt:#FBE9E7;
+  --err:#C62828;--err-lt:#FFEBEE;
+  --tx:#1A2332;--tx2:#5C6878;--tx3:#9AA5B4;--txw:#FFF;
+  --bdr:#D1D8E0;--divider:#EAECF0;--row-even:#F8F9FB;
+  --r-sm:6px;--r-md:10px;--r-lg:16px;
+  --sh:0 1px 4px rgba(26,35,50,.08),0 2px 12px rgba(26,35,50,.05);
+  --sh-btn:0 2px 8px rgba(21,101,192,.22);
+  --sh-modal:0 8px 32px rgba(26,35,50,.18);
+  --f:'Inter','Roboto',sans-serif;--fm:'Roboto Mono','Courier New',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);min-height:100vh;font-size:15px;line-height:1.5}
+button{cursor:pointer;font-family:var(--f)}
+
+.app-wrap{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+.app-header{background:var(--navy);padding:14px 20px 12px;position:sticky;top:0;z-index:100}
+.app-header h1{color:var(--txw);font-size:17px;font-weight:700}
+.hdr-sub{color:rgba(255,255,255,.5);font-size:11px;margin-top:2px}
+.vbadge{font-size:10px;font-weight:500;background:rgba(255,255,255,.15);
+  padding:2px 6px;border-radius:4px;vertical-align:middle;margin-left:5px}
+
+/* PROGRESS STEPS */
+.steps{display:flex;align-items:center;padding:14px 20px 10px;background:var(--navy2)}
+.step{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.4);font-weight:500}
+.step.active{color:#fff}
+.step.done{color:rgba(255,255,255,.6)}
+.step-num{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.step.active .step-num{background:var(--blue);border-color:var(--blue);color:#fff}
+.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
+.step-line{flex:1;height:1px;background:rgba(255,255,255,.15);margin:0 6px}
+
+main{flex:1;padding:16px 16px 80px}
+.page{display:none}.page.active{display:block}
+
+/* CARD */
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--sh);padding:18px}
+.card+.card{margin-top:12px}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--bdr);border-radius:var(--r-lg);background:var(--blue-lt);
+  padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:14px}
+.upload-zone.drag-over{border-color:var(--blue);background:#D0E4F7}
+.upload-zone svg{margin:0 auto 10px;color:var(--blue)}
+.upload-zone h3{font-size:15px;font-weight:600;margin-bottom:3px}
+.upload-zone p{font-size:12px;color:var(--tx2)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 20px;border-radius:var(--r-md);font-size:15px;font-weight:600;
+  min-height:48px;border:none;transition:opacity .15s,transform .1s;width:100%;margin-top:8px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--blue);color:var(--txw);box-shadow:var(--sh-btn)}
+.btn-primary:hover{background:var(--blue-dk)}
+.btn-green{background:var(--green);color:var(--txw)}
+.btn-secondary{background:transparent;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-ghost{background:transparent;color:var(--tx2);font-weight:500}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn-sm{padding:7px 12px;font-size:13px;min-height:36px;width:auto;margin-top:0}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+  border-radius:999px;font-size:12px;font-weight:600}
+.badge-blue{background:var(--blue-lt);color:var(--blue)}
+.badge-green{background:var(--green-lt);color:var(--green)}
+.badge-red{background:var(--err-lt);color:var(--err)}
+.badge-warn{background:var(--warn-lt);color:var(--warn)}
+.summary-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+
+/* STO STATS */
+.sto-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.sto-stat{background:var(--card);border-radius:var(--r-md);padding:10px 8px;text-align:center;box-shadow:var(--sh)}
+.sto-stat .val{font-size:22px;font-weight:700;line-height:1}
+.sto-stat .lbl{font-size:10px;color:var(--tx2);margin-top:3px;font-weight:600;text-transform:uppercase}
+.sto-stat.match .val{color:var(--green)}
+.sto-stat.over  .val{color:var(--blue)}
+.sto-stat.short .val{color:var(--err)}
+
+/* CHIP STATUS */
+.chip{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
+.chip-match{background:var(--green-lt);color:var(--green)}
+.chip-over {background:var(--blue-lt);color:var(--blue)}
+.chip-short{background:var(--err-lt);color:var(--err)}
+.chip-na   {background:var(--divider);color:var(--tx3)}
+
+/* ALERT */
+.alert{padding:10px 13px;border-radius:var(--r-md);font-size:13px;margin-bottom:12px;
+  display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+.alert-warn{background:var(--warn-lt);color:var(--warn);border-left:3px solid var(--warn)}
+.alert-ok{background:var(--green-lt);color:var(--green);border-left:3px solid var(--green)}
+.alert-info{background:var(--blue-lt);color:var(--blue);border-left:3px solid var(--blue)}
+
+/* ITEM CARD */
+.item-list{display:flex;flex-direction:column;gap:5px}
+.item-card{background:var(--card);border-radius:var(--r-md);box-shadow:var(--sh);
+  border-left:3px solid var(--bdr);padding:8px 10px 8px 11px}
+.item-card.done{border-left-color:var(--green)}
+/* ROW A: nama + kode + edit btn */
+.ic-a{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.item-name{font-size:13px;font-weight:700;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
+.item-code{font-size:10px;font-family:var(--fm);color:var(--tx3);white-space:nowrap;flex-shrink:0}
+/* ROW B: meta chips */
+.ic-b{display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap}
+.ic-chip{font-size:10px;color:var(--tx2);background:var(--row-even);
+  border-radius:3px;padding:1px 5px;white-space:nowrap}
+.ic-chip b{color:var(--tx);font-family:var(--fm)}
+.badge-edited{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;
+  background:#FFF3E0;color:#E65100;border:1px solid #FFCC02}
+.btn-edit-sistem{display:inline-flex;align-items:center;gap:2px;
+  background:transparent;border:1px solid var(--bdr);border-radius:4px;
+  padding:1px 6px;font-size:10px;font-weight:600;color:var(--tx3);
+  cursor:pointer;transition:all .15s;flex-shrink:0}
+.btn-edit-sistem:active{border-color:var(--blue);color:var(--blue);background:var(--blue-lt)}
+/* ROW C: input fisik + selisih */
+.ic-c{display:flex;align-items:center;gap:6px}
+.ic-c-label{font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;flex:1}
+.fisik-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.fisik-input{width:76px;height:38px;padding:0 8px;border:2px solid var(--bdr);
+  border-radius:var(--r-sm);font-size:17px;font-weight:700;font-family:var(--fm);
+  color:var(--tx);background:var(--bg);text-align:right;outline:none;
+  transition:border-color .15s,background .15s;-moz-appearance:textfield}
+.fisik-input::-webkit-outer-spin-button,.fisik-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.fisik-input:focus{border-color:var(--blue);background:#fff}
+.fisik-input.filled{border-color:var(--green);background:var(--green-lt)}
+.unit-badge{font-size:11px;font-weight:700;color:var(--tx2);min-width:22px}
+.selisih-tag{font-size:11px;font-weight:700;padding:3px 7px;border-radius:var(--r-sm);
+  min-width:46px;text-align:center;flex-shrink:0}
+.selisih-pos{background:var(--blue-lt);color:var(--blue)}
+.selisih-neg{background:var(--err-lt);color:var(--err)}
+.selisih-zero{background:var(--green-lt);color:var(--green)}
+.selisih-na{background:var(--divider);color:var(--tx3)}
+
+/* PROGRESS BAR */
+.progress-wrap{margin-bottom:14px}
+.progress-info{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:5px}
+.progress-bar{height:6px;background:var(--divider);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+
+/* FILTER TAB */
+.filter-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.filter-tabs::-webkit-scrollbar{display:none}
+.ftab{padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;
+  border:1.5px solid var(--bdr);background:var(--card);color:var(--tx2);
+  white-space:nowrap;cursor:pointer;transition:all .15s}
+.ftab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* RESULT TABLE */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-md);border:1px solid var(--divider)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:12px}
+thead tr{background:var(--navy)}
+thead th{color:var(--txw);font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.05em;padding:9px 10px;text-align:left;white-space:nowrap}
+tbody tr:nth-child(even){background:var(--row-even)}
+tbody tr:nth-child(odd){background:#fff}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--divider);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+td.num{text-align:right;font-family:var(--fm)}
+td.pos{color:var(--blue);font-weight:700}
+td.neg{color:var(--err);font-weight:700}
+td.zero{color:var(--green);font-weight:700}
+.mono{font-family:var(--fm)}
+
+/* ACTIONS FIXED */
+.actions-fixed{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;background:var(--card);
+  padding:12px 16px env(safe-area-inset-bottom,12px);
+  border-top:1px solid var(--divider);z-index:90;display:flex;gap:8px}
+.actions-fixed .btn{margin-top:0;flex:1}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,35,50,.5);z-index:200;
+  display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:var(--card);border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;max-width:480px;padding:0 0 env(safe-area-inset-bottom,16px);
+  box-shadow:var(--sh-modal);max-height:88vh;overflow-y:auto;animation:slideUp .22s ease}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 0}
+.modal-header{padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:16px;font-weight:700}
+.modal-body{padding:14px 18px 20px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
+.field input{width:100%;height:48px;padding:0 14px;border:1.5px solid var(--bdr);
+  border-radius:var(--r-md);font-size:15px;font-family:var(--f);color:var(--tx);
+  background:var(--card);transition:border-color .15s;outline:none}
+.field input:focus{border-color:var(--blue)}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);
+  padding:11px 18px;border-radius:var(--r-md);font-size:13px;font-weight:500;
+  color:#fff;z-index:999;opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;
+  max-width:calc(100vw - 32px);text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-success{background:var(--green)}.toast-error{background:var(--err)}.toast-info{background:var(--navy)}
+
+/* LOADING */
+.spinner-wrap{text-align:center;padding:40px 20px;color:var(--tx2);font-size:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--divider);border-top-color:var(--blue);
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TMPL BOX */
+.tmpl-box{background:var(--navy2);border-radius:var(--r-md);padding:12px 14px;margin-top:12px}
+.tmpl-box h4{color:var(--txw);font-size:12px;font-weight:600;margin-bottom:7px}
+.tmpl-box ul{list-style:none;display:flex;flex-wrap:wrap;gap:5px}
+.tmpl-box li{background:rgba(255,255,255,.12);color:rgba(255,255,255,.75);
+  font-size:10px;padding:2px 7px;border-radius:4px;font-family:var(--fm)}
+
+/* EDITABLE STOK SISTEM */
+.item-stok-sis{font-size:12px;color:var(--tx2);margin-top:4px;display:flex;align-items:center;gap:5px}
+.item-stok-sis span{font-weight:700;color:var(--tx);font-family:var(--fm)}
+.btn-edit-sistem{display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid var(--bdr);border-radius:4px;
+  padding:1px 6px;font-size:10px;font-weight:600;color:var(--tx2);
+  cursor:pointer;transition:all .15s;gap:3px;line-height:1.6}
+.btn-edit-sistem:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-lt)}
+.badge-edited{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;
+  border-radius:3px;background:#FFF3E0;color:#E65100;border:1px solid #FFCC02;
+  vertical-align:middle;margin-left:3px}
+
+/* MODAL EDIT SISTEM */
+#modal-edit-sistem .modal-body{padding:18px 18px 24px}
+.edit-sistem-info{background:var(--blue-lt);border-radius:var(--r-md);padding:10px 12px;margin-bottom:14px}
+.edit-sistem-info .mat-name{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.edit-sistem-info .mat-code{font-size:11px;color:var(--tx2);font-family:var(--fm)}
+.nilai-lama{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:var(--row-even);border-radius:var(--r-md);margin-bottom:12px}
+.nilai-lama .lbl{font-size:11px;color:var(--tx2);font-weight:600;text-transform:uppercase}
+.nilai-lama .val{font-size:18px;font-weight:700;font-family:var(--fm);color:var(--tx)}
+.input-sistem-baru{width:100%;height:52px;padding:0 16px;
+  border:2px solid var(--blue);border-radius:var(--r-md);
+  font-size:22px;font-weight:700;font-family:var(--fm);
+  color:var(--tx);background:#fff;text-align:right;outline:none;
+  -moz-appearance:textfield}
+.input-sistem-baru::-webkit-outer-spin-button,
+.input-sistem-baru::-webkit-inner-spin-button{-webkit-appearance:none}
+.edit-unit-label{font-size:13px;font-weight:700;color:var(--tx2);text-align:right;margin-top:4px}
+.btn-group-edit{display:flex;gap:8px;margin-top:14px}
+.btn-group-edit .btn{margin-top:0}
+/* RANDOM STO */
+.random-banner{background:linear-gradient(135deg,#1A2332 0%,#243044 100%);
+  border-radius:var(--r-md);padding:10px 12px;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px}
+.random-banner svg{flex-shrink:0;color:var(--blue-lt)}
+.random-banner-txt{flex:1;font-size:12px;color:rgba(255,255,255,.75)}
+.random-banner-txt b{color:#fff;display:block;font-size:13px;margin-bottom:2px}
+.btn-reroll{background:rgba(255,255,255,.12);border:none;border-radius:6px;
+  padding:5px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;transition:background .15s}
+.btn-reroll:active{background:rgba(255,255,255,.25)}
+
+#modal-random .modal-body{padding:18px 18px 28px}
+.random-desc{font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.5}
+.random-desc b{color:var(--tx)}
+.pct-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#pct-slider{flex:1;-webkit-appearance:none;height:6px;border-radius:3px;
+  background:var(--divider);outline:none;cursor:pointer}
+#pct-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+  border-radius:50%;background:var(--blue);cursor:pointer;box-shadow:var(--sh-btn)}
+#pct-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;
+  background:var(--blue);cursor:pointer;border:none}
+.pct-val{font-size:22px;font-weight:700;font-family:var(--fm);
+  color:var(--blue);min-width:52px;text-align:right}
+.random-preview{background:var(--blue-lt);border-radius:var(--r-md);
+  padding:12px 14px;text-align:center;margin-bottom:14px}
+.random-preview .big{font-size:32px;font-weight:700;font-family:var(--fm);color:var(--blue)}
+.random-preview .sub{font-size:12px;color:var(--tx2);margin-top:2px}
+.random-mode-row{display:flex;gap:6px;margin-bottom:14px}
+.mode-btn{flex:1;padding:8px 4px;border:2px solid var(--bdr);border-radius:var(--r-sm);
+  font-size:11px;font-weight:600;color:var(--tx2);background:var(--card);
+  cursor:pointer;text-align:center;transition:all .15s}
+.mode-btn.active{border-color:var(--blue);color:var(--blue);background:var(--blue-lt)}
+.item-spec{font-size:11.5px;color:var(--tx2);margin-top:2px;line-height:1.35}
+.fisik-wrap{display:flex;align-items:center;gap:6px}
+.btn-calc{flex-shrink:0;width:38px;height:38px;border:2px solid var(--bdr);border-radius:var(--r-sm);
+  background:#fff;color:var(--blue);font-size:16px;display:flex;align-items:center;justify-content:center}
+.btn-calc:active{background:var(--blue-lt)}
+.calc-disp{background:var(--navy);color:#fff;font-family:var(--fm);font-size:24px;text-align:right;
+  padding:14px 16px;border-radius:var(--r-md);margin-bottom:10px;min-height:54px;word-break:break-all}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.calc-grid button{height:48px;border-radius:var(--r-sm);border:1px solid var(--bdr);background:#fff;
+  font-size:17px;font-weight:600;color:var(--tx)}
+.calc-grid button.op{background:var(--blue-lt);color:var(--blue)}
+.calc-grid button.eq{background:var(--blue);color:#fff;grid-row:span 2}
+.calc-grid button.use{background:var(--green);color:#fff;grid-column:span 4}
+.share-link-box{display:flex;gap:6px;margin-top:10px}
+.share-link-box input{flex:1;height:40px;padding:0 10px;border:2px solid var(--bdr);border-radius:var(--r-sm);
+  font-size:11px;font-family:var(--fm);color:var(--tx2);background:var(--row-even)}
+.share-qr{text-align:center;margin:6px 0}
+.share-qr img{border-radius:var(--r-md);border:1px solid var(--bdr)}
+
+/* DESKTOP / LAPTOP LAYOUT */
+@media (min-width:860px){
+  .app-wrap{max-width:1080px}
+  main{padding:24px 28px 60px}
+  #item-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .item-card{margin:0!important}
+  table.result-table{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+<!-- HEADER -->
+<header class="app-header">
+  <h1>StokSync <span class="vbadge">v4.0</span></h1>
+  <div class="hdr-sub">Stock Opname — PT Rayard Deli Indonesia</div>
+</header>
+
+<!-- STEPS -->
+<div class="steps" id="steps-bar">
+  <div class="step active" id="step1"><div class="step-num">1</div><span>Upload</span></div>
+  <div class="step-line"></div>
+  <div class="step" id="step2"><div class="step-num">2</div><span>Sampling</span></div>
+  <div class="step-line"></div>
+  <div class="step" id="step3"><div class="step-num">3</div><span>Hitung</span></div>
+  <div class="step-line"></div>
+  <div class="step" id="step4"><div class="step-num">4</div><span>Hasil</span></div>
+</div>
+
+<main>
+
+<!-- PAGE 1: UPLOAD -->
+<div id="page-upload" class="page active">
+  <div class="card">
+    <div class="upload-zone" id="upload-zone">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 16V4m0 0L8 8m4-4l4 4"/>
+        <path d="M20 16.7A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/>
+      </svg>
+      <h3>Upload Data Stok Sistem</h3>
+      <p>File Excel dari ERP / inventory sistem</p>
+      <p style="margin-top:3px;color:var(--tx3);font-size:11px">.xlsx / .xls · maks 10 MB</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
+    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Pilih File Excel
+    </button>
+    <button class="btn btn-ghost" onclick="downloadTemplate()" style="margin-top:4px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Unduh Template Excel
+    </button>
+  </div>
+  <div class="card" id="upload-resume-card" style="display:none">
+    <p style="font-size:12.5px;color:var(--tx2)">📲 Ada data terkirim dari PC/HP lain? Buka link/QR yang dibagikan — data otomatis termuat di sini.</p>
+  </div>
+  <div class="tmpl-box">
+    <h4>Kolom dalam template (stok sistem dari Excel):</h4>
+    <ul>
+      <li>Material Code</li><li>Material Name</li><li>Spesifikasi</li>
+      <li>Batch</li><li>Stok Inventory</li><li>Unit</li><li>Supplier</li>
+    </ul>
+    <p style="color:rgba(255,255,255,.4);font-size:10px;margin-top:7px">
+      ⚡ Stok Fisik diinput langsung di HP saat hitung lapangan — tidak perlu di Excel
+    </p>
+  </div>
+</div>
+
+<!-- PAGE: LOADING -->
+<div id="page-loading" class="page">
+  <div class="card">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <div id="loading-msg">Membaca file Excel…</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: SAMPLING ACAK -->
+<div id="page-sampling" class="page">
+  <div class="card">
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:32px;margin-bottom:6px">🎲</div>
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:6px">Sampling STO Bulan Ini</h2>
+      <p style="font-size:13px;color:var(--tx2)">File berhasil dibaca. Tentukan berapa persen item yang akan di-STO bulan ini, lalu sistem akan memilih secara acak.</p>
+    </div>
+    <div style="background:var(--row-even);border-radius:var(--r-md);padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:12px;color:var(--tx2)">Total item di Excel</div>
+      <div style="font-size:20px;font-weight:700;font-family:var(--fm)" id="smp-total">0</div>
+    </div>
+    <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:8px">Persentase Sampling</label>
+    <div class="pct-row">
+      <input type="range" id="pct-slider" min="5" max="100" value="30" oninput="updateSamplingPreview()">
+      <div class="pct-val" id="pct-label">30%</div>
+    </div>
+    <div class="random-mode-row">
+      <button class="mode-btn active" id="mode-pct" onclick="setSmpMode('pct')">% dari total</button>
+      <button class="mode-btn" id="mode-fix" onclick="setSmpMode('fix')">Jumlah fix</button>
+    </div>
+    <div id="smp-fix-row" style="display:none;margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Jumlah Item</label>
+      <input type="number" inputmode="numeric" id="smp-fix-input" min="1"
+        style="width:100%;height:48px;padding:0 14px;border:2px solid var(--blue);border-radius:var(--r-md);font-size:22px;font-weight:700;font-family:var(--fm);color:var(--tx);outline:none;text-align:right;-moz-appearance:textfield"
+        oninput="updateSamplingPreview()">
+    </div>
+    <div class="random-preview">
+      <div class="big" id="smp-count">0</div>
+      <div class="sub">item akan di-STO &nbsp;·&nbsp; <span id="smp-skip">0</span> item di-skip</div>
+    </div>
+    <button class="btn btn-primary" onclick="applySampling()">
+      🎲 Acak &amp; Mulai STO
+    </button>
+    <button class="btn btn-ghost" onclick="applySamplingAll()" style="margin-top:4px">STO semua item (tanpa sampling)</button>
+    <button class="btn btn-ghost" onclick="openShare()" style="margin-top:4px">📲 Kirim Data ke HP Lain</button>
+  </div>
+</div>
+
+<!-- PAGE 3: INPUT FISIK -->
+<div id="page-input" class="page">
+  <div class="random-banner" id="random-banner" style="display:none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+    <div class="random-banner-txt">
+      <b id="random-banner-title">Sampling Aktif</b>
+      <span id="random-banner-sub">—</span>
+    </div>
+    <button class="btn-reroll" onclick="goReroll()">🎲 Acak Ulang</button>
+  </div>
+  <div class="alert alert-info" id="input-hint">
+    📋 Input jumlah stok fisik hasil hitung lapangan pada setiap item di bawah.
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-info">
+      <span>Progress input fisik</span>
+      <span id="progress-text">0 / 0</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="filter-tabs" id="filter-tabs">
+    <div class="ftab active" onclick="setFilter('all',this)">Semua</div>
+    <div class="ftab" onclick="setFilter('pending',this)">Belum diisi</div>
+    <div class="ftab" onclick="setFilter('done',this)">Sudah diisi</div>
+  </div>
+
+  <div class="item-list" id="item-list"></div>
+
+  <div class="actions-fixed">
+    <button class="btn btn-ghost btn-sm" onclick="confirmReset()" style="flex:0 0 auto;width:auto;padding:0 14px">← Ulang</button>
+    <button class="btn btn-primary" id="btn-to-result" onclick="goToResult()" disabled>
+      Lihat Hasil &amp; Export →
+    </button>
+  </div>
+</div>
+
+<!-- PAGE 3: HASIL -->
+<div id="page-result" class="page">
+  <div id="result-banner"></div>
+  <div class="sto-stats" id="sto-stats"></div>
+  <div class="summary-bar" id="summary-bar"></div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>No</th><th>Material Code</th><th>Material Name</th>
+            <th>Batch</th><th>Supplier</th><th style="text-align:right">Stok Sistem</th>
+            <th style="text-align:right">Stok Fisik</th>
+            <th style="text-align:right">Selisih</th>
+            <th style="text-align:center">Status</th><th>Unit</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="height:80px"></div>
+  <div class="actions-fixed">
+    <button class="btn btn-ghost btn-sm" onclick="backToInput()" style="flex:0 0 auto;width:auto;padding:0 14px">← Edit</button>
+    <button class="btn btn-secondary btn-sm" onclick="openConfig()" style="flex:0 0 auto;width:auto">⚙ Header</button>
+    <button class="btn btn-green" id="btn-export" onclick="exportPdf()">
+      Export PDF A4
+    </button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- MODAL CONFIG -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Header Dokumen PDF</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeConfig()" style="width:auto;margin:0">Tutup</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Nama Perusahaan</label>
+        <input id="f-company" type="text" placeholder="PT Rayard Deli Indonesia"></div>
+      <div class="field"><label>Tanggal STO</label>
+        <input id="f-date" type="date"></div>
+      <div class="field"><label>Nomor Dokumen</label>
+        <input id="f-docno" type="text" placeholder="STO/WH/2026/001"></div>
+      <div class="field"><label>Lokasi Gudang</label>
+        <input id="f-loc" type="text" placeholder="Gudang Utama — Kutanegara, Karawang"></div>
+      <button class="btn btn-primary" onclick="saveConfig()">Simpan & Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT STOK SISTEM -->
+<div class="modal-overlay" id="modal-edit-sistem" onclick="closeEditSistem(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Edit Stok Sistem & Batch</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeEditSistem()" style="width:auto;margin:0">Tutup</button>
+    </div>
+    <div class="modal-body">
+      <div class="edit-sistem-info">
+        <div class="mat-name" id="esm-name">—</div>
+        <div class="mat-code" id="esm-code">—</div>
+      </div>
+      <div class="nilai-lama">
+        <div>
+          <div class="lbl">Stok Sistem Saat Ini</div>
+          <div class="val" id="esm-current">—</div>
+        </div>
+        <div style="font-size:12px;color:var(--tx3);" id="esm-unit-lama">—</div>
+      </div>
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:5px">Stok Sistem Baru</label>
+      <input type="number" inputmode="numeric" id="esm-input" class="input-sistem-baru" placeholder="0" min="0">
+      <div class="edit-unit-label" id="esm-unit-new">—</div>
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin:12px 0 5px">Batch / No. Lot</label>
+      <input type="text" id="esm-batch" style="width:100%;height:44px;padding:0 14px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:15px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none;transition:border-color .15s" placeholder="Contoh: BTH-2026-01" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--bdr)'">
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin:12px 0 5px">Supplier</label>
+      <input type="text" id="esm-supplier" style="width:100%;height:44px;padding:0 14px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:15px;font-family:var(--f);color:var(--tx);background:#fff;outline:none;transition:border-color .15s" placeholder="Nama supplier" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--bdr)'">
+      <div class="btn-group-edit">
+        <button class="btn btn-secondary" onclick="closeEditSistem()" style="flex:0 0 auto;width:auto;padding:0 16px">Batal</button>
+        <button class="btn btn-primary" onclick="saveEditSistem()">Simpan Perubahan</button>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:var(--warn-lt);border-radius:var(--r-sm);font-size:11px;color:var(--warn)">
+        ⚠ Perubahan ini hanya berlaku di sesi ini dan akan ikut ter-export ke PDF. Data Excel asli tidak berubah.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KALKULATOR -->
+<div class="modal-overlay" id="modal-calc" onclick="if(event.target===this)closeCalc()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Kalkulator Stok Fisik</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeCalc()" style="width:auto;margin:0">Tutup</button>
+    </div>
+    <div class="modal-body">
+      <div class="calc-disp" id="calc-disp">0</div>
+      <div class="calc-grid">
+        <button onclick="calcKey('C')">C</button><button onclick="calcKey('back')">⌫</button><button onclick="calcKey('%')" class="op">%</button><button onclick="calcKey('/')" class="op">÷</button>
+        <button onclick="calcKey('7')">7</button><button onclick="calcKey('8')">8</button><button onclick="calcKey('9')">9</button><button onclick="calcKey('*')" class="op">×</button>
+        <button onclick="calcKey('4')">4</button><button onclick="calcKey('5')">5</button><button onclick="calcKey('6')">6</button><button onclick="calcKey('-')" class="op">−</button>
+        <button onclick="calcKey('1')">1</button><button onclick="calcKey('2')">2</button><button onclick="calcKey('3')">3</button><button onclick="calcKey('+')" class="op">+</button>
+        <button onclick="calcKey('0')" style="grid-column:span 2">0</button><button onclick="calcKey('.')">.</button><button onclick="calcKey('=')" class="eq">=</button>
+        <button onclick="calcUse()" class="use">Gunakan Hasil →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SHARE / KIRIM KE HP -->
+<div class="modal-overlay" id="modal-share" onclick="if(event.target===this)closeShare()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Kirim Data ke HP</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeShare()" style="width:auto;margin:0">Tutup</button>
+    </div>
+    <div class="modal-body" id="share-body">
+      <p style="font-size:12.5px;color:var(--tx2);margin-bottom:8px">Scan QR ini pakai kamera HP, atau salin link dan kirim via WhatsApp/email. Data terbuka otomatis di HP — tidak perlu upload ulang.</p>
+      <div class="share-qr" id="share-qr"></div>
+      <div class="share-link-box">
+        <input type="text" id="share-link-input" readonly>
+        <button class="btn btn-primary btn-sm" style="width:auto;padding:0 14px" onclick="copyShareLink()">Salin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+
+<script>
+const REQUIRED_HEADERS = ['Material Code','Material Name','Spesifikasi','Batch','Stok Inventory','Unit','Supplier'];
+const MAX_FILE = 10*1024*1024;
+let appState = { rows: [], allRows: [], docConfig: {}, filter: 'all', samplingPct: null };
+
+/* === PAGE / STEP NAV === */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function setStep(n) {
+  [1,2,3,4].forEach(i => {
+    const s = document.getElementById('step'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  });
+}
+
+/* === UPLOAD === */
+const zone = document.getElementById('upload-zone');
+const fi   = document.getElementById('file-input');
+zone.addEventListener('click', () => fi.click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fi.addEventListener('change', () => { if(fi.files[0]) handleFile(fi.files[0]); });
+
+async function handleFile(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) return showToast('File harus .xlsx atau .xls','error');
+  if (file.size > MAX_FILE) return showToast('File melebihi 10 MB','error');
+  showPage('page-loading');
+  document.getElementById('loading-msg').textContent = 'Membaca file Excel…';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, {type:'array'});
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    if (!raw.length) throw new Error('File kosong.');
+    const hrow = raw[0].map(h => String(h).trim());
+    const miss = REQUIRED_HEADERS.filter(h => !hrow.includes(h));
+    if (miss.length) throw new Error('Kolom tidak ditemukan: '+miss.join(', '));
+    document.getElementById('loading-msg').textContent = 'Memproses data…';
+    const idx = {};
+    REQUIRED_HEADERS.forEach(h => idx[h] = hrow.indexOf(h));
+    const rows = raw.slice(1)
+      .map((r,i) => ({
+        materialCode: String(r[idx['Material Code']]??'').trim(),
+        materialName: String(r[idx['Material Name']]??'').trim(),
+        spesifikasi:  String(r[idx['Spesifikasi']]??'').trim(),
+        batch:        String(r[idx['Batch']]??'').trim(),
+        stokSistem:   Number(r[idx['Stok Inventory']]),
+        unit:         String(r[idx['Unit']]??'').trim(),
+        supplier:     String(r[idx['Supplier']]??'').trim(),
+        stokFisik:    null, // diisi operator
+        _id:          i
+      }))
+      .filter(r => r.materialCode || r.materialName);
+    if (!rows.length) throw new Error('Tidak ada data baris.');
+    appState.rows = rows;
+    appState.allRows = rows; // simpan semua untuk reroll
+    loadConfig();
+    // Tampilkan halaman sampling
+    document.getElementById('smp-total').textContent = rows.length;
+    document.getElementById('smp-fix-input').max = rows.length;
+    document.getElementById('smp-fix-input').value = Math.ceil(rows.length * 0.3);
+    updateSamplingPreview();
+    showPage('page-sampling');
+    setStep(2);
+  } catch(err) {
+    showPage('page-upload');
+    showToast(err.message,'error');
+  }
+  fi.value='';
+}
+
+/* === SAMPLING ACAK === */
+let _smpMode = 'pct';
+
+function setSmpMode(m) {
+  _smpMode = m;
+  document.getElementById('mode-pct').classList.toggle('active', m==='pct');
+  document.getElementById('mode-fix').classList.toggle('active', m==='fix');
+  document.getElementById('smp-fix-row').style.display = m==='fix' ? 'block' : 'none';
+  document.getElementById('pct-slider').closest('.pct-row').style.display = m==='pct' ? 'flex' : 'none';
+  document.getElementById('pct-label').closest('.pct-row') && (document.querySelector('.pct-row').style.display = m==='pct'?'flex':'none');
+  updateSamplingPreview();
+}
+
+function updateSamplingPreview() {
+  const total = appState.allRows.length || parseInt(document.getElementById('smp-total').textContent) || 0;
+  let n;
+  if (_smpMode === 'pct') {
+    const pct = parseInt(document.getElementById('pct-slider').value);
+    document.getElementById('pct-label').textContent = pct + '%';
+    n = Math.max(1, Math.round(total * pct / 100));
+  } else {
+    n = Math.min(total, Math.max(1, parseInt(document.getElementById('smp-fix-input').value)||1));
+  }
+  document.getElementById('smp-count').textContent = n;
+  document.getElementById('smp-skip').textContent = total - n;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function applySampling() {
+  const total = appState.allRows.length;
+  let n;
+  if (_smpMode === 'pct') {
+    n = Math.max(1, Math.round(total * parseInt(document.getElementById('pct-slider').value) / 100));
+  } else {
+    n = Math.min(total, Math.max(1, parseInt(document.getElementById('smp-fix-input').value)||1));
+  }
+  const sampled = shuffle(appState.allRows).slice(0, n).map((r,i) => ({...r, stokFisik:null, _id:i}));
+  appState.rows = sampled;
+  appState.samplingPct = Math.round(n/total*100);
+  // tampilkan banner di page-input
+  const banner = document.getElementById('random-banner');
+  banner.style.display = 'flex';
+  document.getElementById('random-banner-title').textContent = `Sampling Aktif — ${n} dari ${total} item (${appState.samplingPct}%)`;
+  document.getElementById('random-banner-sub').textContent = `Dipilih acak · ${total-n} item di-skip bulan ini`;
+  loadConfig();
+  renderInputPage();
+  showPage('page-input');
+  setStep(3);
+}
+
+function applySamplingAll() {
+  appState.rows = appState.allRows.map((r,i) => ({...r, stokFisik:null, _id:i}));
+  appState.samplingPct = null;
+  document.getElementById('random-banner').style.display = 'none';
+  loadConfig();
+  renderInputPage();
+  showPage('page-input');
+  setStep(3);
+}
+
+function goReroll() {
+  // reset stokFisik allRows
+  appState.allRows = appState.allRows.map(r => ({...r, stokFisik:null}));
+  document.getElementById('smp-total').textContent = appState.allRows.length;
+  document.getElementById('smp-fix-input').max = appState.allRows.length;
+  updateSamplingPreview();
+  showPage('page-sampling');
+  setStep(2);
+}
+
+/* === INPUT FISIK PAGE === */
+function setFilter(f, el) {
+  appState.filter = f;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderItemList();
+}
+
+function renderInputPage() {
+  renderItemList();
+  updateProgress();
+}
+
+function renderItemList() {
+  const f = appState.filter;
+  const rows = appState.rows.filter(r => {
+    if (f === 'pending') return r.stokFisik === null;
+    if (f === 'done')    return r.stokFisik !== null;
+    return true;
+  });
+  const list = document.getElementById('item-list');
+  if (!rows.length) {
+    list.innerHTML = `<div class="card" style="text-align:center;color:var(--tx3);padding:30px">Tidak ada item</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(r => {
+    const isDone = r.stokFisik !== null;
+    const sel = isDone ? (r.stokFisik - r.stokSistem) : null;
+    const selCls = sel===null?'selisih-na':sel>0?'selisih-pos':sel<0?'selisih-neg':'selisih-zero';
+    const selTxt = sel===null?'—':(sel>0?'+':'')+sel.toLocaleString('id-ID');
+    return `<div class="item-card ${isDone?'done':'pending'}" id="icard-${r._id}">
+  <div class="ic-a">
+    <div class="item-name">${esc(r.materialName)||'—'}</div>
+    <div class="item-code">${esc(r.materialCode)}</div>
+    ${r.spesifikasi?`<div class="item-spec">${esc(r.spesifikasi)}</div>`:''}
+    <button class="btn-edit-sistem" onclick="openEditSistem(${r._id})" title="Edit">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+    </button>
+  </div>
+  <div class="ic-b">
+    <span class="ic-chip">Sistem <b>${isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID')} ${esc(r.unit)}</b></span>
+    <span class="ic-chip">Batch <b>${esc(r.batch)||'—'}</b></span>
+    ${r.supplier?`<span class="ic-chip">Supp <b>${esc(r.supplier)}</b></span>`:''}
+    ${r._sistemEdited?'<span class="badge-edited">EDITED</span>':''}
+  </div>
+  <div class="ic-c">
+    <div class="ic-c-label">Stok Fisik</div>
+    <div class="fisik-wrap">
+      <input type="number" inputmode="numeric" class="fisik-input ${isDone?'filled':''}"
+        id="fisik-${r._id}" value="${isDone?r.stokFisik:''}" placeholder="0"
+        onchange="setFisik(${r._id},this.value)" oninput="setFisik(${r._id},this.value)">
+      <div class="unit-badge">${esc(r.unit)}</div>
+      <button type="button" class="btn-calc" onclick="openCalc(${r._id})" title="Kalkulator">🧮</button>
+    </div>
+    <span class="selisih-tag ${selCls}" id="sel-${r._id}">${selTxt}</span>
+  </div>
+</div>`;
+  }).join('');
+}
+
+function setFisik(id, val) {
+  const row = appState.rows.find(r => r._id === id);
+  if (!row) return;
+  const num = val === '' ? null : parseFloat(val);
+  row.stokFisik = (num !== null && !isNaN(num)) ? num : null;
+  const card = document.getElementById('icard-'+id);
+  const input = document.getElementById('fisik-'+id);
+  const selTag = document.getElementById('sel-'+id);
+  if (card && input && selTag) {
+    const isDone = row.stokFisik !== null;
+    card.className = 'item-card ' + (isDone ? 'done' : 'pending');
+    input.className = 'fisik-input ' + (isDone ? 'filled' : '');
+    const selisih = isDone ? (row.stokFisik - row.stokSistem) : null;
+    const selClass = selisih === null ? 'selisih-na' : selisih > 0 ? 'selisih-pos' : selisih < 0 ? 'selisih-neg' : 'selisih-zero';
+    selTag.className = 'selisih-tag ' + selClass;
+    selTag.textContent = selisih === null ? '—' : (selisih > 0 ? '+' : '') + selisih.toLocaleString('id-ID');
+  }
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = appState.rows.length;
+  const done  = appState.rows.filter(r => r.stokFisik !== null).length;
+  const pct   = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progress-text').textContent = `${done} / ${total}`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('btn-to-result').disabled = done === 0;
+}
+
+function goToResult() {
+  const undone = appState.rows.filter(r => r.stokFisik === null).length;
+  if (undone > 0 && !confirm(`${undone} item belum diisi stok fisik. Tetap lanjut ke hasil?`)) return;
+  renderResult();
+  showPage('page-result');
+  setStep(4);
+}
+
+function backToInput() {
+  showPage('page-input');
+  setStep(2);
+  renderItemList();
+  updateProgress();
+}
+
+/* === RESULT PAGE === */
+function renderResult() {
+  const rows = appState.rows;
+  const withFisik = rows.filter(r => r.stokFisik !== null);
+  const matchC = withFisik.filter(r => r.stokFisik === r.stokSistem).length;
+  const overC  = withFisik.filter(r => r.stokFisik  > r.stokSistem).length;
+  const shortC = withFisik.filter(r => r.stokFisik  < r.stokSistem).length;
+  const naC    = rows.filter(r => r.stokFisik === null).length;
+
+  document.getElementById('sto-stats').innerHTML = `
+    <div class="sto-stat match"><div class="val">${matchC}</div><div class="lbl">MATCH</div></div>
+    <div class="sto-stat over"> <div class="val">${overC}</div> <div class="lbl">OVER (+)</div></div>
+    <div class="sto-stat short"><div class="val">${shortC}</div><div class="lbl">SHORT (−)</div></div>`;
+
+  document.getElementById('summary-bar').innerHTML = `
+    <span class="badge badge-blue">Total: ${rows.length}</span>
+    <span class="badge badge-green">Diisi: ${withFisik.length}</span>
+    ${naC ? `<span class="badge badge-warn">Belum: ${naC}</span>` : ''}`;
+
+  document.getElementById('result-banner').innerHTML = shortC
+    ? `<div class="alert alert-warn">⚠ ${shortC} item SHORT — stok fisik kurang dari sistem.</div>`
+    : `<div class="alert alert-ok">✓ Tidak ada item SHORT. ${matchC} MATCH, ${overC} OVER.</div>`;
+
+  document.getElementById('result-body').innerHTML = rows.map((r,i) => {
+    const isDone = r.stokFisik !== null;
+    const sel = isDone ? (r.stokFisik - r.stokSistem) : null;
+    const status = isDone ? (sel === 0 ? 'MATCH' : sel > 0 ? 'OVER' : 'SHORT') : 'N/A';
+    const chipC  = {MATCH:'chip-match',OVER:'chip-over',SHORT:'chip-short','N/A':'chip-na'}[status];
+    const selC   = sel === null ? '' : sel > 0 ? 'pos' : sel < 0 ? 'neg' : 'zero';
+    return `<tr>
+      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
+      <td><span class="mono" style="font-size:11px">${esc(r.materialCode)}</span></td>
+      <td style="font-size:12px">${esc(r.materialName)}</td>
+      <td><span class="mono" style="font-size:10px">${esc(r.batch)}</span></td>
+      <td style="font-size:11px">${esc(r.supplier||'—')}</td>
+      <td class="num">${isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID')}${r._sistemEdited?'<span class="badge-edited" style="margin-left:4px;font-size:8px">E</span>':''}</td>
+      <td class="num">${isDone ? r.stokFisik.toLocaleString('id-ID') : '<span style="color:var(--tx3)">—</span>'}</td>
+      <td class="num ${selC}">${sel===null?'—':(sel>0?'+':'')+sel.toLocaleString('id-ID')}</td>
+      <td style="text-align:center"><span class="chip ${chipC}">${status}</span></td>
+      <td style="font-size:11px">${esc(r.unit)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* === EDIT STOK SISTEM === */
+let _esmId = null;
+
+function openEditSistem(id) {
+  const row = appState.rows.find(r => r._id === id);
+  if (!row) return;
+  _esmId = id;
+  document.getElementById('esm-name').textContent    = row.materialName || '—';
+  document.getElementById('esm-code').textContent    = (row.materialCode || '—') + (row.batch ? ' · ' + row.batch : '');
+  document.getElementById('esm-current').textContent = isNaN(row.stokSistem) ? '—' : row.stokSistem.toLocaleString('id-ID');
+  document.getElementById('esm-unit-lama').textContent = row.unit || '';
+  document.getElementById('esm-unit-new').textContent  = row.unit || '';
+  document.getElementById('esm-batch').value = row.batch || '';
+  document.getElementById('esm-supplier').value = row.supplier || '';
+  const inp = document.getElementById('esm-input');
+  inp.value = isNaN(row.stokSistem) ? '' : row.stokSistem;
+  document.getElementById('modal-edit-sistem').classList.add('open');
+  setTimeout(() => inp.select(), 120);
+}
+
+function closeEditSistem(e) {
+  if (e && e.target !== document.getElementById('modal-edit-sistem')) return;
+  document.getElementById('modal-edit-sistem').classList.remove('open');
+  _esmId = null;
+}
+
+function saveEditSistem() {
+  if (_esmId === null) return;
+  const row = appState.rows.find(r => r._id === _esmId);
+  if (!row) return;
+  const val = parseFloat(document.getElementById('esm-input').value);
+  if (isNaN(val) || val < 0) { showToast('Masukkan angka yang valid','error'); return; }
+  const oldVal = row.stokSistem;
+  row.stokSistem    = val;
+  row.batch         = document.getElementById('esm-batch').value.trim();
+  row.supplier      = document.getElementById('esm-supplier').value.trim();
+  row._sistemEdited = true;
+  row._sistemOri    = row._sistemOri ?? oldVal; // simpan nilai asli pertama kali
+  document.getElementById('modal-edit-sistem').classList.remove('open');
+  _esmId = null;
+  // re-render card yang bersangkutan saja lewat full re-render (ringan)
+  renderItemList();
+  updateProgress();
+  showToast(`Data diperbarui → Stok: ${val.toLocaleString('id-ID')} ${row.unit}`, 'success');
+}
+
+/* === CONFIG === */
+function openConfig()  { loadConfig(); document.getElementById('config-modal').classList.add('open'); }
+function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
+function loadConfig() {
+  const s = JSON.parse(localStorage.getItem('sto_cfg')||'{}');
+  document.getElementById('f-company').value = s.company||'PT Rayard Deli Indonesia';
+  document.getElementById('f-date').value    = s.date||new Date().toISOString().split('T')[0];
+  document.getElementById('f-docno').value   = s.docno||'';
+  document.getElementById('f-loc').value     = s.loc||'Gudang Utama — Kutanegara, Karawang';
+  appState.docConfig = s;
+}
+function saveConfig() {
+  const cfg = {
+    company: document.getElementById('f-company').value.trim(),
+    date:    document.getElementById('f-date').value,
+    docno:   document.getElementById('f-docno').value.trim(),
+    loc:     document.getElementById('f-loc').value.trim()
+  };
+  localStorage.setItem('sto_cfg', JSON.stringify(cfg));
+  appState.docConfig = cfg;
+  closeConfig();
+  showToast('Header disimpan','success');
+}
+
+/* === RESET === */
+function confirmReset() {
+  if (confirm('Kembali ke upload? Semua input fisik akan hilang.')) {
+    appState = { rows:[], docConfig:{}, filter:'all' };
+    setStep(1);
+    showPage('page-upload');
+  }
+}
+
+/* === PDF === */
+async function exportPdf() {
+  const cfg = appState.docConfig;
+  if (!cfg.company) { openConfig(); showToast('Lengkapi header dokumen','info'); return; }
+  const btn = document.getElementById('btn-export');
+  btn.disabled = true; btn.textContent = 'Membuat PDF…';
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const rows = appState.rows;
+    const pageW=210, mX=14, hH=40;
+    const dateStr = cfg.date ? new Date(cfg.date+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+    const docno = cfg.docno||'—';
+    const withFisik = rows.filter(r=>r.stokFisik!==null);
+    const matchC = withFisik.filter(r=>r.stokFisik===r.stokSistem).length;
+    const overC  = withFisik.filter(r=>r.stokFisik>r.stokSistem).length;
+    const shortC = withFisik.filter(r=>r.stokFisik<r.stokSistem).length;
+
+    const tBody = rows.map((r,i) => {
+      const isDone = r.stokFisik !== null;
+      const sel = isDone ? r.stokFisik - r.stokSistem : null;
+      const status = isDone ? (sel===0?'MATCH':sel>0?'OVER':'SHORT') : 'N/A';
+      return [
+        i+1, r.materialCode, r.materialName, r.batch,
+        r.supplier||'—',
+        isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID') + (r._sistemEdited ? ' *' : ''),
+        isDone?r.stokFisik.toLocaleString('id-ID'):'—',
+        sel===null?'—':(sel>0?'+':'')+sel.toLocaleString('id-ID'),
+        status, r.unit
+      ];
+    });
+
+    const statusColors = rows.map(r => {
+      if (r.stokFisik===null) return [150,150,150];
+      const s = r.stokFisik - r.stokSistem;
+      return s===0?[46,125,50]:s>0?[21,101,192]:[198,40,40];
+    });
+
+    doc.autoTable({
+      head:[['No','Mat.Code','Material Name','Batch','Supplier','Stok Sistem','Stok Fisik','Selisih','Status','Unit']],
+      body: tBody,
+      startY: hH+8,
+      margin:{left:mX,right:mX},
+      styles:{fontSize:8,cellPadding:2.2,textColor:[26,35,50],font:'helvetica'},
+      headStyles:{fillColor:[26,35,50],textColor:255,fontSize:8,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[248,249,251]},
+      columnStyles:{
+        0:{cellWidth:7,halign:'center'},
+        1:{cellWidth:20,font:'courier',fontSize:7},
+        4:{cellWidth:22},
+        5:{cellWidth:16,halign:'right'},
+        6:{cellWidth:16,halign:'right'},
+        7:{cellWidth:14,halign:'right',fontStyle:'bold'},
+        8:{cellWidth:13,halign:'center',fontStyle:'bold'},
+        9:{cellWidth:8}
+      },
+      didParseCell:(d)=>{
+        if(d.section==='body'&&(d.column.index===7||d.column.index===8)){
+          d.cell.styles.textColor=statusColors[d.row.index];
+        }
+      },
+      didDrawPage:()=>{
+        const pg=doc.internal.getCurrentPageInfo().pageNumber;
+        // header
+        doc.setFillColor(26,35,50); doc.rect(0,0,pageW,hH,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
+        doc.text(cfg.company||'Nama Perusahaan',mX,12);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(180,195,215);
+        doc.text('LAPORAN STOCK OPNAME — StokSync v4.0',mX,20);
+        doc.setFontSize(8); doc.setTextColor(200,215,230);
+        doc.text(`Tanggal STO : ${dateStr}`,mX,28);
+        doc.text(`No. Dokumen : ${docno}`,mX+82,28);
+        doc.text(`Lokasi : ${cfg.loc||'—'}`,mX,35);
+        if(appState.samplingPct!==null){
+          doc.setTextColor(255,200,100);
+          doc.text(`Sampling ${appState.samplingPct}% (${rows.length} dari ${appState.allRows.length} item)`,pageW-mX,35,{align:'right'});
+        }
+        // summary strip
+        const sy=hH+1, sH=5, tW=pageW-mX*2;
+        doc.setFontSize(7); doc.setFont('helvetica','bold');
+        doc.setFillColor(232,245,233); doc.rect(mX,sy,tW/3,sH,'F');
+        doc.setTextColor(46,125,50); doc.text(`MATCH: ${matchC}`,mX+2,sy+3.5);
+        doc.setFillColor(227,238,249); doc.rect(mX+tW/3,sy,tW/3,sH,'F');
+        doc.setTextColor(21,101,192); doc.text(`OVER: ${overC}`,mX+tW/3+2,sy+3.5);
+        doc.setFillColor(255,235,238); doc.rect(mX+tW*2/3,sy,tW/3,sH,'F');
+        doc.setTextColor(198,40,40); doc.text(`SHORT: ${shortC}`,mX+tW*2/3+2,sy+3.5);
+        // footer
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(130,140,155);
+        doc.setDrawColor(209,216,224);
+        doc.line(mX,285,pageW-mX,285);
+        doc.text(`Halaman ${pg}`,mX,290);
+        doc.text(cfg.company||'',pageW-mX,290,{align:'right'});
+        const editedCount = rows.filter(r=>r._sistemEdited).length;
+        if (editedCount > 0) {
+          doc.setTextColor(230,81,0);
+          doc.text(`* ${editedCount} stok sistem diubah manual dalam sesi ini`,mX,294);
+        }
+        doc.setTextColor(130,140,155);
+        doc.text('Diperiksa: _____________________',mX,295);
+        doc.text('Disetujui: _____________________',pageW/2,295);
+      }
+    });
+
+    const safe=(docno).replace(/[^a-zA-Z0-9_-]/g,'_');
+    const tgl=(cfg.date||new Date().toISOString().split('T')[0]).replace(/-/g,'');
+    doc.save(`STO_${safe}_${tgl}.pdf`);
+    showToast('PDF berhasil diunduh!','success');
+  } catch(err) {
+    showToast('Gagal buat PDF: '+err.message,'error');
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML=`Export PDF A4`;
+  }
+}
+
+/* === TEMPLATE === */
+function downloadTemplate() {
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([
+    REQUIRED_HEADERS,
+    ['MAT-001','Kayu Jati Grade A','100x200x4 cm','BTH-2026-01',50,'LBR','PT Kayu Nusantara'],
+    ['MAT-002','MDF Board','120x240x1.8 cm','BTH-2026-02',120,'LBR','CV Papan Jaya'],
+    ['MAT-003','Lem Putih Fox','1 kg/kaleng','BTH-2026-03',30,'PCS','PT Henkel Indonesia'],
+  ]);
+  ws['!cols']=[{wch:16},{wch:28},{wch:22},{wch:18},{wch:14},{wch:8},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws,'STO Template');
+  XLSX.writeFile(wb,'Template_StokSync_v4.xlsx');
+  showToast('Template diunduh','success');
+}
+
+/* === TOAST === */
+let _tt;
+/* === KALKULATOR STOK FISIK === */
+let _calcTarget = null, _calcExpr = '';
+function openCalc(id) {
+  _calcTarget = id;
+  const row = appState.rows.find(r => r._id === id);
+  _calcExpr = (row && row.stokFisik !== null) ? String(row.stokFisik) : '';
+  document.getElementById('calc-disp').textContent = _calcExpr || '0';
+  document.getElementById('modal-calc').classList.add('open');
+}
+function closeCalc() { document.getElementById('modal-calc').classList.remove('open'); }
+function calcKey(k) {
+  if (k === 'C') { _calcExpr = ''; }
+  else if (k === 'back') { _calcExpr = _calcExpr.slice(0,-1); }
+  else if (k === '=') {
+    try {
+      if (!/^[0-9+\-*/.%() ]*$/.test(_calcExpr)) throw 0;
+      const v = Function('"use strict";return ('+_calcExpr.replace(/%/g,'/100')+')')();
+      _calcExpr = (isFinite(v) ? +v.toFixed(4) : '') + '';
+    } catch(e) { _calcExpr = 'Error'; }
+  } else { _calcExpr = (_calcExpr === 'Error' ? '' : _calcExpr) + k; }
+  document.getElementById('calc-disp').textContent = _calcExpr || '0';
+}
+function calcUse() {
+  if (_calcExpr === '' || _calcExpr === 'Error') return;
+  let v = _calcExpr;
+  if (/[+\-*/%]/.test(v)) calcKey('=');
+  v = parseFloat(document.getElementById('calc-disp').textContent);
+  if (isNaN(v)) return showToast('Hasil tidak valid','error');
+  const input = document.getElementById('fisik-'+_calcTarget);
+  if (input) { input.value = v; setFisik(_calcTarget, v); }
+  closeCalc();
+}
+
+/* === KIRIM DATA KE HP LAIN (QR + LINK, tanpa server) === */
+function openShare() {
+  const payload = JSON.stringify({ r: appState.rows, c: appState.docConfig || {} });
+  const compressed = LZString.compressToEncodedURIComponent(payload);
+  const link = location.origin + location.pathname + '#stoData=' + compressed;
+  document.getElementById('share-link-input').value = link;
+  const qrBox = document.getElementById('share-qr');
+  if (link.length <= 1800) {
+    qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link)}" width="220" height="220" alt="QR">`;
+  } else {
+    qrBox.innerHTML = `<p style="font-size:11px;color:var(--warn)">Data terlalu besar untuk QR — gunakan link di bawah (kirim via WA/email).</p>`;
+  }
+  document.getElementById('modal-share').classList.add('open');
+}
+function closeShare() { document.getElementById('modal-share').classList.remove('open'); }
+function copyShareLink() {
+  const inp = document.getElementById('share-link-input');
+  inp.select(); inp.setSelectionRange(0,99999);
+  navigator.clipboard?.writeText(inp.value).then(()=>showToast('Link disalin','success'))
+    .catch(()=>document.execCommand('copy'));
+}
+function tryLoadFromHash() {
+  const h = location.hash;
+  const m = h.match(/stoData=([^&]+)/);
+  if (!m) return false;
+  try {
+    const json = LZString.decompressFromEncodedURIComponent(m[1]);
+    const data = JSON.parse(json);
+    if (!data.r || !data.r.length) return false;
+    appState.rows = data.r;
+    appState.allRows = data.r;
+    appState.docConfig = data.c || {};
+    document.getElementById('smp-total').textContent = data.r.length;
+    document.getElementById('smp-fix-input').max = data.r.length;
+    document.getElementById('smp-fix-input').value = Math.ceil(data.r.length * 0.3);
+    updateSamplingPreview();
+    showPage('page-sampling');
+    setStep(2);
+    showToast('Data berhasil dimuat dari link','success');
+    history.replaceState(null,'',location.pathname);
+    return true;
+  } catch(e) { return false; }
+}
+window.addEventListener('load', tryLoadFromHash);
+
+function showToast(msg,type='info') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast toast-${type} show`;
+  clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+loadConfig();
+
+/* === PWA === */
+(function(){
+  const manifest={name:'StokSync — RDI',short_name:'StokSync',
+    start_url:'./',display:'standalone',
+    background_color:'#1A2332',theme_color:'#1A2332',
+    icons:[{src:`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231A2332'/><text y='340' x='256' text-anchor='middle' font-size='280' font-family='sans-serif'>📦</text></svg>`,sizes:'512x512',type:'image/svg+xml'}]};
+  const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.getElementById('pwa-manifest').href=URL.createObjectURL(mBlob);
+})();
+</script>
+</body>
+</html>
