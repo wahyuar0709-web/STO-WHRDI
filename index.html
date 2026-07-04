@@ -202,9 +202,9 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 
 /* ===== TOAST ===== */
 .toast{position:fixed;bottom:96px;left:20px;right:20px;padding:14px 16px;border-radius:var(--r-md);color:#fff;
-  font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;transform:translateY(150%);
-  transition:transform .3s cubic-bezier(.2,.8,.3,1);z-index:1000;max-width:440px;margin:0 auto;overflow-wrap:anywhere}
-.toast.show{transform:translateY(0)}
+  font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;transform:translateY(150%);opacity:0;pointer-events:none;
+  transition:transform .3s cubic-bezier(.2,.8,.3,1),opacity .3s ease;z-index:1000;max-width:440px;margin:0 auto;overflow-wrap:anywhere}
+.toast.show{transform:translateY(0);opacity:1;pointer-events:auto}
 .toast-success{background:linear-gradient(135deg,#10B981,#0E9F6E);box-shadow:0 10px 26px rgba(14,159,110,.3)}
 .toast-error{background:linear-gradient(135deg,#DC2626,#B91C1C);box-shadow:0 10px 26px rgba(220,38,38,.3)}
 .toast-info{background:linear-gradient(135deg,#1179C9,#073E78);box-shadow:0 10px 26px rgba(10,93,176,.3)}
@@ -326,11 +326,11 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
       </div>
 
       <div class="section-label">Info</div>
-      <div class="promo-banner" onclick="showPage('page-settings')">
-        <div class="promo-ic"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4"/><circle cx="12" cy="16.7" r="0.6" fill="currentColor" stroke="none"/></svg></div>
+      <div class="promo-banner" id="home-cloud-banner" onclick="showPage('page-settings')">
+        <div class="promo-ic" id="home-cloud-banner-ic"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4"/><circle cx="12" cy="16.7" r="0.6" fill="currentColor" stroke="none"/></svg></div>
         <div class="promo-tx">
-          <div class="t">Belum atur Cloud Sync URL</div>
-          <div class="s">Wajib diisi sebelum upload data master</div>
+          <div class="t" id="home-cloud-banner-title">Belum atur Cloud Sync URL</div>
+          <div class="s" id="home-cloud-banner-sub">Wajib diisi sebelum upload data master</div>
         </div>
         <svg class="ic" viewBox="0 0 24 24" style="color:var(--tx3)"><path d="M9 5l7 7-7 7"/></svg>
       </div>
@@ -624,7 +624,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.6';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -709,6 +709,19 @@ function refreshHomeSummary() {
   } else {
     syncEl.textContent = 'Cloud belum diatur';
     if (aboutChip) { aboutChip.textContent = 'Belum diatur'; aboutChip.className = 'list-row-chip off'; }
+  }
+
+  const bannerEl = document.getElementById('home-cloud-banner');
+  const bannerTitle = document.getElementById('home-cloud-banner-title');
+  const bannerSub = document.getElementById('home-cloud-banner-sub');
+  if (bannerEl && bannerTitle && bannerSub) {
+    if (appState.config.cloudSyncUrl) {
+      bannerTitle.textContent = 'Cloud Sync aktif';
+      bannerSub.textContent = 'Data siap disinkron ke spreadsheet';
+    } else {
+      bannerTitle.textContent = 'Belum atur Cloud Sync URL';
+      bannerSub.textContent = 'Wajib diisi sebelum upload data master';
+    }
   }
 }
 
@@ -1014,12 +1027,14 @@ function testCloudConnection() {
 }
 
 // ====== HELPER FUNCTIONS ======
+let toastTimer = null;
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');
   const icon = type === 'success' ? SVG.check : type === 'error' ? SVG.error : SVG.info;
   t.innerHTML = `${icon}<span>${msg}</span>`;
   t.className = `toast toast-${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3000);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 const statusTimers = {};
@@ -1057,17 +1072,25 @@ function saveGeneralSettings() {
 
 function downloadTemplate() {
   const XLSX = window.XLSX;
-  const wb = XLSX.utils.book_new();
-  const headers = ['Material Code', 'Material Name', 'Spesifikasi', 'Batch', 'Lokasi', 'Stok Inventory', 'Unit', 'Supplier'];
-  const ws = XLSX.utils.aoa_to_sheet([
-    headers,
-    ['MAT-001', 'Kayu Jati Grade A', '100x200x4 cm', 'BTH-2026-01', 'Gudang A - Rak 1', 50, 'LBR', 'PT Kayu Nusantara'],
-    ['MAT-002', 'MDF Board', '120x240x1.8 cm', 'BTH-2026-02', 'Gudang A - Rak 3', 120, 'LBR', 'CV Papan Jaya'],
-  ]);
-  ws['!cols'] = [{wch:16}, {wch:28}, {wch:22}, {wch:18}, {wch:20}, {wch:14}, {wch:8}, {wch:22}];
-  XLSX.utils.book_append_sheet(wb, ws, 'Master Data');
-  XLSX.writeFile(wb, 'Template_STO_v2.xlsx');
-  showToast('Template berhasil diunduh', 'success');
+  if (!XLSX || !XLSX.utils) {
+    showToast('Gagal memuat library Excel. Pastikan terhubung internet lalu reload halaman.', 'error');
+    return;
+  }
+  try {
+    const wb = XLSX.utils.book_new();
+    const headers = ['Material Code', 'Material Name', 'Spesifikasi', 'Batch', 'Lokasi', 'Stok Inventory', 'Unit', 'Supplier'];
+    const ws = XLSX.utils.aoa_to_sheet([
+      headers,
+      ['MAT-001', 'Kayu Jati Grade A', '100x200x4 cm', 'BTH-2026-01', 'Gudang A - Rak 1', 50, 'LBR', 'PT Kayu Nusantara'],
+      ['MAT-002', 'MDF Board', '120x240x1.8 cm', 'BTH-2026-02', 'Gudang A - Rak 3', 120, 'LBR', 'CV Papan Jaya'],
+    ]);
+    ws['!cols'] = [{wch:16}, {wch:28}, {wch:22}, {wch:18}, {wch:20}, {wch:14}, {wch:8}, {wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Master Data');
+    XLSX.writeFile(wb, 'Template_STO_v2.xlsx');
+    showToast('Template berhasil diunduh', 'success');
+  } catch (err) {
+    showToast('Gagal mengunduh template: ' + err.message, 'error');
+  }
 }
 
 function handleExcelUpload(event) {
