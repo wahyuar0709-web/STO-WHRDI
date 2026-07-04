@@ -396,6 +396,21 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         <span class="template-col">Supplier</span>
       </div>
 
+      <!-- BACKUP MANUAL -->
+      <div class="section-label">Backup Manual</div>
+      <div class="settings-section">
+        <div class="settings-hint" style="display:block;margin-bottom:12px">
+          Gunakan jika sinkronisasi otomatis gagal. Push akan membuat/menyamakan semua sheet gudang lokal ke spreadsheet. Pull akan mengambil daftar sheet gudang yang sudah ada di spreadsheet.
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-bottom:10px" onclick="pushAccountsToCloud()">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6.5 10.5 12 5l5.5 5.5"/><path d="M5 19h14"/></svg>Push Gudang ke Spreadsheet
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="pullAccountsFromCloud()">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6.5 13.5 12 19l5.5-5.5"/><path d="M5 5h14"/></svg>Pull Gudang dari Spreadsheet
+        </button>
+        <div id="backup-manual-status" style="margin-top:10px"></div>
+      </div>
+
       <!-- GENERAL SETTINGS -->
       <div class="section-label">Pengaturan Umum</div>
       <div class="settings-section">
@@ -418,7 +433,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         <div class="list-row" style="cursor:default">
           <div class="list-row-ic"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/></svg></div>
           <div class="list-row-tx"><div class="t">Versi Aplikasi</div></div>
-          <div class="list-row-val">2.2.0</div>
+          <div class="list-row-val" id="about-app-version">2.2.0</div>
         </div>
         <div class="list-row" style="cursor:default">
           <div class="list-row-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18a4.2 4.2 0 0 1-.6-8.35A5.5 5.5 0 0 1 17 8.7 4 4 0 0 1 16.2 18H7Z"/></svg></div>
@@ -624,6 +639,9 @@ const APP_VERSION = '2.3';
 
   const versiInfo = document.getElementById('hdr-versi-info');
   if (versiInfo) versiInfo.textContent = 'Versi ' + APP_VERSION;
+
+  const aboutVersion = document.getElementById('about-app-version');
+  if (aboutVersion) aboutVersion.textContent = APP_VERSION;
 })();
 
 // ====== ICONS ======
@@ -742,21 +760,54 @@ function saveNewAccount() {
     id: 'acc_' + Date.now(),
     name: name,
     sheetName: sheetName,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    cloudSynced: false
   };
-  appState.accounts.push(account);
-  persistAccounts();
 
-  if (!appState.currentAccount) {
-    appState.currentAccount = account;
-    persistCurrentAccount();
+  const finishSaveLocal = () => {
+    appState.accounts.push(account);
+    persistAccounts();
+    if (!appState.currentAccount) {
+      appState.currentAccount = account;
+      persistCurrentAccount();
+    }
+    closeNewAccountModal();
+    renderAccountsList();
+    refreshHomeSummary();
+    updateAccountBars();
+  };
+
+  if (!appState.config.cloudSyncUrl) {
+    finishSaveLocal();
+    showToast('Gudang "' + name + '" disimpan lokal (Cloud Sync URL belum diatur)', 'error');
+    return;
   }
 
-  showToast('Gudang "' + name + '" berhasil ditambahkan', 'success');
-  closeNewAccountModal();
-  renderAccountsList();
-  refreshHomeSummary();
-  updateAccountBars();
+  const btn = document.querySelector('#modal-new-account .btn-primary');
+  if (btn) { btn.disabled = true; btn.innerHTML = `${SVG.loader}<span>Membuat sheet di spreadsheet...</span>`; }
+
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'createAccount', sheetName: sheetName })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      account.cloudSynced = true;
+      finishSaveLocal();
+      showToast('Gudang "' + name + '" & sheet berhasil dibuat di spreadsheet', 'success');
+    } else {
+      finishSaveLocal();
+      showToast('Gudang tersimpan lokal, tapi gagal dibuat di spreadsheet: ' + data.error, 'error');
+    }
+  })
+  .catch(err => {
+    finishSaveLocal();
+    showToast('Gudang tersimpan lokal, tapi gagal terhubung ke cloud. Gunakan tombol Push di Pengaturan.', 'error');
+  })
+  .finally(() => {
+    if (btn) { btn.disabled = false; btn.innerHTML = `${SVG.check}<span>Simpan Gudang</span>`; }
+  });
 }
 
 function selectAccount(id) {
@@ -804,7 +855,7 @@ function renderAccountsList() {
     return `
     <div class="acc-tile ${isSelected ? 'selected' : ''}" onclick="selectAccount('${acc.id}')" style="margin-bottom:12px">
       <div class="acc-tile-top">
-        <div class="acc-tile-icon"><svg class="ic-lg" viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12"/><path d="M4 21h16"/><path d="M9 21v-7h6v7"/></svg></div>
+        <div class="acc-tile-icon"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12"/><path d="M4 21h16"/><path d="M9 21v-7h6v7"/></svg></div>
         <div class="acc-tile-info">
           <div class="acc-tile-name">${acc.name}</div>
           <div class="acc-tile-sheet">${acc.sheetName}</div>
@@ -832,6 +883,89 @@ function updateAccountBars() {
   if (uploadSheet) uploadSheet.textContent = acc ? acc.sheetName : '-';
   if (samplingBar) samplingBar.querySelector('.acc-bar-name').textContent = acc ? acc.name : 'Pilih Gudang';
   if (samplingSheet) samplingSheet.textContent = acc ? acc.sheetName : '-';
+}
+
+// ====== BACKUP MANUAL: PUSH & PULL GUDANG ======
+function pushAccountsToCloud() {
+  if (!appState.config.cloudSyncUrl) {
+    showError('backup-manual-status', 'Atur Cloud Sync URL terlebih dahulu');
+    return;
+  }
+  if (!appState.accounts.length) {
+    showError('backup-manual-status', 'Belum ada gudang untuk di-push');
+    return;
+  }
+
+  document.getElementById('backup-manual-status').innerHTML =
+    `<div class="settings-status" style="background:var(--blue-lt);color:var(--blue)">${SVG.loader}<span>Push ${appState.accounts.length} gudang ke spreadsheet...</span></div>`;
+
+  const url = appState.config.cloudSyncUrl;
+  let okCount = 0, failCount = 0;
+
+  const pushOne = (i) => {
+    if (i >= appState.accounts.length) {
+      persistAccounts();
+      renderAccountsList();
+      const msg = `Push selesai: ${okCount} berhasil` + (failCount ? `, ${failCount} gagal` : '');
+      if (failCount) showError('backup-manual-status', msg);
+      else showSuccess('backup-manual-status', msg);
+      showToast(msg, failCount ? 'error' : 'success');
+      return;
+    }
+    const acc = appState.accounts[i];
+    fetch(url, { method: 'POST', body: JSON.stringify({ action: 'createAccount', sheetName: acc.sheetName }) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { acc.cloudSynced = true; okCount++; } else { failCount++; }
+      })
+      .catch(() => { failCount++; })
+      .finally(() => pushOne(i + 1));
+  };
+  pushOne(0);
+}
+
+function pullAccountsFromCloud() {
+  if (!appState.config.cloudSyncUrl) {
+    showError('backup-manual-status', 'Atur Cloud Sync URL terlebih dahulu');
+    return;
+  }
+
+  document.getElementById('backup-manual-status').innerHTML =
+    `<div class="settings-status" style="background:var(--blue-lt);color:var(--blue)">${SVG.loader}<span>Mengambil daftar gudang dari spreadsheet...</span></div>`;
+
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'listAccounts' })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.ok) {
+      showError('backup-manual-status', 'Gagal pull: ' + data.error);
+      return;
+    }
+    let added = 0;
+    data.accounts.forEach(remote => {
+      const exists = appState.accounts.some(a => a.sheetName.toLowerCase() === remote.sheetName.toLowerCase());
+      if (!exists) {
+        appState.accounts.push({
+          id: 'acc_' + Date.now() + '_' + added,
+          name: remote.sheetName,
+          sheetName: remote.sheetName,
+          createdAt: new Date().toISOString(),
+          cloudSynced: true
+        });
+        added++;
+      }
+    });
+    persistAccounts();
+    renderAccountsList();
+    const msg = added ? `${added} gudang baru ditemukan & disinkron` : 'Semua gudang sudah sinkron, tidak ada yang baru';
+    showSuccess('backup-manual-status', msg);
+    showToast(msg, 'success');
+  })
+  .catch(err => {
+    showError('backup-manual-status', 'Gagal terhubung ke cloud: ' + err.message);
+  });
 }
 
 // ====== CLOUD SYNC URL MANAGEMENT ======
@@ -888,14 +1022,26 @@ function showToast(msg, type = 'info') {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function showSuccess(elementId, msg) {
-  const el = document.getElementById(elementId);
-  if (el) el.innerHTML = `<div class="settings-status success">${SVG.check}<span>${msg}</span></div>`;
+const statusTimers = {};
+
+function scheduleStatusClear(elementId, ms) {
+  if (statusTimers[elementId]) clearTimeout(statusTimers[elementId]);
+  statusTimers[elementId] = setTimeout(() => {
+    const el = document.getElementById(elementId);
+    if (el) el.innerHTML = '';
+  }, ms);
 }
 
-function showError(elementId, msg) {
+function showSuccess(elementId, msg, autoHideMs = 4000) {
+  const el = document.getElementById(elementId);
+  if (el) el.innerHTML = `<div class="settings-status success">${SVG.check}<span>${msg}</span></div>`;
+  scheduleStatusClear(elementId, autoHideMs);
+}
+
+function showError(elementId, msg, autoHideMs = 5000) {
   const el = document.getElementById(elementId);
   if (el) el.innerHTML = `<div class="settings-status error">${SVG.error}<span>${msg}</span></div>`;
+  scheduleStatusClear(elementId, autoHideMs);
 }
 
 function saveGeneralSettings() {
