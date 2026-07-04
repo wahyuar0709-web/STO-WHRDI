@@ -3,27 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>StokSync v4.0 — RDI Warehouse</title>
+<title>RDI-STO v1.6 — RDI Warehouse</title>
 <meta name="theme-color" content="#1A2332">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StokSync">
+<meta name="apple-mobile-web-app-title" content="RDI-STO">
 <link rel="manifest" id="pwa-manifest">
 <style>
 :root {
-  --bg:#F5F6F8;--card:#FFF;--navy:#1A2332;--navy2:#243044;
-  --blue:#1565C0;--blue-lt:#E3EEF9;--blue-dk:#0D3F7A;
-  --green:#2E7D32;--green-lt:#E8F5E9;
-  --warn:#E65100;--warn-lt:#FBE9E7;
-  --err:#C62828;--err-lt:#FFEBEE;
-  --tx:#1A2332;--tx2:#5C6878;--tx3:#9AA5B4;--txw:#FFF;
-  --bdr:#D1D8E0;--divider:#EAECF0;--row-even:#F8F9FB;
-  --r-sm:6px;--r-md:10px;--r-lg:16px;
-  --sh:0 1px 4px rgba(26,35,50,.08),0 2px 12px rgba(26,35,50,.05);
-  --sh-btn:0 2px 8px rgba(21,101,192,.22);
-  --sh-modal:0 8px 32px rgba(26,35,50,.18);
-  --f:'Inter','Roboto',sans-serif;--fm:'Roboto Mono','Courier New',monospace;
+  --bg:#F0F4FA;--card:#FFF;--navy:#0F172A;--navy2:#1E293B;
+  --blue:#2563EB;--blue-lt:#EFF6FF;--blue-dk:#1D4ED8;
+  --indigo:#4F46E5;--indigo-lt:#EEF2FF;
+  --green:#059669;--green-lt:#ECFDF5;
+  --warn:#D97706;--warn-lt:#FFFBEB;
+  --err:#DC2626;--err-lt:#FEF2F2;
+  --tx:#0F172A;--tx2:#475569;--tx3:#94A3B8;--txw:#FFF;
+  --bdr:#E2E8F0;--divider:#F1F5F9;--row-even:#F8FAFC;
+  --r-sm:8px;--r-md:12px;--r-lg:18px;--r-xl:24px;
+  --sh:0 1px 3px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.04);
+  --sh-md:0 4px 20px rgba(15,23,42,.10);
+  --sh-btn:0 4px 12px rgba(37,99,235,.30);
+  --sh-modal:0 20px 60px rgba(15,23,42,.22);
+  --f:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --fm:ui-monospace,'SF Mono','Cascadia Code','Roboto Mono','Courier New',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--f);background:var(--bg);color:var(--tx);min-height:100vh;font-size:15px;line-height:1.5}
@@ -32,22 +35,127 @@ button{cursor:pointer;font-family:var(--f)}
 .app-wrap{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
 
 /* HEADER */
-.app-header{background:var(--navy);padding:14px 20px 12px;position:sticky;top:0;z-index:100}
-.app-header h1{color:var(--txw);font-size:17px;font-weight:700}
-.hdr-sub{color:rgba(255,255,255,.5);font-size:11px;margin-top:2px}
-.vbadge{font-size:10px;font-weight:500;background:rgba(255,255,255,.15);
-  padding:2px 6px;border-radius:4px;vertical-align:middle;margin-left:5px}
+.app-header{background:linear-gradient(135deg,#0D3F7A 0%,#1565C0 100%);
+  padding:18px 20px 16px;position:sticky;top:0;z-index:100;border-radius:0 0 22px 22px;
+  box-shadow:0 4px 16px rgba(13,63,122,.25)}
+.hdr-row{display:flex;align-items:center;gap:10px}
+.hdr-logo{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.16);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;flex-shrink:0}
+.hdr-tx{flex:1;min-width:0}
+.app-header h1{color:var(--txw);font-size:16px;font-weight:700;display:flex;align-items:center}
+.hdr-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:1px}
+.vbadge{font-size:9.5px;font-weight:600;background:rgba(255,255,255,.18);
+  padding:2px 7px;border-radius:20px;vertical-align:middle;margin-left:7px}
+/* ── ACCOUNT PAGE ── */
+.acc-hero{background:linear-gradient(145deg,#0F172A 0%,#1E3A5F 60%,#1E40AF 100%);
+  margin:-16px -16px 0;padding:36px 20px 28px;text-align:center;position:relative;overflow:hidden}
+.acc-hero::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 50% 120%,rgba(37,99,235,.35) 0%,transparent 70%)}
+.acc-hero-logo{width:56px;height:56px;border-radius:16px;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;
+  justify-content:center;margin:0 auto 14px;font-size:26px}
+.acc-hero h2{color:#fff;font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.acc-hero p{color:rgba(255,255,255,.55);font-size:12px}
+.acc-hero .vbadge{background:rgba(255,255,255,.15);font-size:9px}
 
-/* PROGRESS STEPS */
-.steps{display:flex;align-items:center;padding:14px 20px 10px;background:var(--navy2)}
-.step{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.4);font-weight:500}
-.step.active{color:#fff}
-.step.done{color:rgba(255,255,255,.6)}
-.step-num{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;
-  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-.step.active .step-num{background:var(--blue);border-color:var(--blue);color:#fff}
-.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
-.step-line{flex:1;height:1px;background:rgba(255,255,255,.15);margin:0 6px}
+.acc-grid{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.acc-tile{border-radius:var(--r-lg);overflow:hidden;cursor:pointer;
+  box-shadow:var(--sh-md);position:relative;
+  transition:transform .15s,box-shadow .15s}
+.acc-tile:active{transform:scale(.98);box-shadow:var(--sh)}
+.acc-tile-top{padding:18px 18px 14px;display:flex;align-items:center;gap:14px}
+.acc-tile-icon{width:44px;height:44px;border-radius:12px;
+  background:rgba(255,255,255,.18);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:22px}
+.acc-tile-info{flex:1;min-width:0}
+.acc-tile-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px}
+.acc-tile-sheet{font-size:10.5px;color:rgba(255,255,255,.65);margin-top:2px;font-family:var(--fm)}
+.acc-tile-status{display:flex;align-items:center;gap:6px;
+  padding:8px 18px;background:rgba(0,0,0,.18)}
+.acc-tile-dot{width:6px;height:6px;border-radius:50%}
+.acc-tile-dot.ok{background:#34D399}
+.acc-tile-dot.warn{background:#FCD34D}
+.acc-tile-status span{font-size:10.5px;color:rgba(255,255,255,.7)}
+.acc-tile-arrow{color:rgba(255,255,255,.5)}
+.acc-tile.selected .acc-tile-top{box-shadow:0 0 0 2px rgba(255,255,255,.5) inset}
+
+/* ── UPLOAD PAGE ACCOUNT BAR ── */
+.acc-bar{display:flex;align-items:center;gap:10px;
+  background:var(--card);border-radius:var(--r-md);padding:10px 14px;
+  box-shadow:var(--sh);margin-bottom:12px;border-left:3px solid var(--blue)}
+.acc-bar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.acc-bar-info{flex:1;min-width:0}
+.acc-bar-name{font-size:13px;font-weight:700;color:var(--tx)}
+.acc-bar-sheet{font-size:11px;color:var(--tx3);font-family:var(--fm)}
+
+/* ── UPLOAD ZONE redesign ── */
+.upload-zone{border-radius:var(--r-lg);
+  background:linear-gradient(145deg,#EFF6FF,#E0EFFE);
+  border:1.5px dashed #93C5FD;padding:28px 20px;text-align:center;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.upload-zone:active{background:var(--blue-lt);border-color:var(--blue)}
+.upload-zone-ic{width:52px;height:52px;border-radius:14px;background:var(--blue);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px;
+  box-shadow:0 6px 18px rgba(37,99,235,.35)}
+.upload-zone h3{font-size:15px;font-weight:700;margin-bottom:4px;color:var(--tx)}
+.upload-zone p{font-size:12px;color:var(--tx2)}
+
+/* ── MENU ROW redesign ── */
+.menu-row{display:flex;align-items:center;gap:12px;padding:12px 0;cursor:pointer;
+  border-radius:var(--r-md);transition:background .12s}
+.menu-row:active{background:var(--divider)}
+.menu-row+.menu-row{border-top:1px solid var(--divider)}
+.menu-ic{width:38px;height:38px;border-radius:10px;background:var(--blue-lt);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.menu-tx{flex:1;min-width:0}
+.menu-tx .t{font-size:13.5px;font-weight:600;color:var(--tx)}
+.menu-tx .s{font-size:11px;color:var(--tx3);margin-top:1px}
+.menu-chev{color:var(--tx3);flex-shrink:0;transition:transform .2s}
+
+/* ── BTN redesign ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:0 16px;height:46px;border-radius:var(--r-md);
+  border:none;font-size:14px;font-weight:600;transition:all .15s;margin-top:8px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:#fff;
+  box-shadow:var(--sh-btn)}
+.btn-primary:active{opacity:.88;transform:scale(.98)}
+.btn-green{background:linear-gradient(135deg,#059669,#047857);color:#fff;
+  box-shadow:0 4px 12px rgba(5,150,105,.30)}
+.btn-secondary{background:transparent;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-secondary:active{background:var(--blue-lt)}
+.btn-ghost{background:var(--divider);color:var(--tx2);border:none}
+.btn-ghost:active{background:var(--bdr)}
+.btn-sm{height:36px;font-size:12.5px;padding:0 12px;margin-top:0}
+
+/* ── ACCOUNT CONFIG LIST ── */
+.acc-cfg-item{background:var(--card);border-radius:var(--r-md);padding:14px;
+  margin-bottom:8px;border:1.5px solid var(--bdr);position:relative}
+.acc-cfg-item label{font-size:10px;font-weight:700;color:var(--tx3);
+  text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
+.acc-cfg-item input{width:100%;height:40px;padding:0 12px;border:1.5px solid var(--bdr);
+  border-radius:var(--r-sm);font-size:13px;color:var(--tx);background:#fff;
+  outline:none;transition:border-color .15s;margin-bottom:8px}
+.acc-cfg-item input:focus{border-color:var(--blue)}
+.acc-cfg-item input:last-of-type{margin-bottom:0}
+.acc-cfg-color-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.acc-color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:transform .12s}
+.acc-color-dot.sel{border-color:var(--tx);transform:scale(1.18)}
+.acc-del-btn{position:absolute;top:10px;right:10px;background:var(--err-lt);
+  border:none;color:var(--err);width:28px;height:28px;border-radius:8px;
+  font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* PROGRESS STEPS (segmented, BCA-style) */
+.steps{padding:16px 2px 0}
+.steps-track{display:flex;gap:5px}
+.step{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.22);transition:background .25s}
+.step.done{background:#fff}
+.step.active{background:#fff}
+.step-num,.step span{display:none}
+.step-line{display:none}
+.steps-caption{margin-top:8px;font-size:11.5px;color:rgba(255,255,255,.75);font-weight:500}
+.steps-caption b{color:#fff;font-weight:700}
 
 main{flex:1;padding:16px 16px 80px}
 .page{display:none}.page.active{display:block}
@@ -57,12 +165,25 @@ main{flex:1;padding:16px 16px 80px}
 .card+.card{margin-top:12px}
 
 /* UPLOAD ZONE */
-.upload-zone{border:2px dashed var(--bdr);border-radius:var(--r-lg);background:var(--blue-lt);
-  padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:14px}
-.upload-zone.drag-over{border-color:var(--blue);background:#D0E4F7}
-.upload-zone svg{margin:0 auto 10px;color:var(--blue)}
-.upload-zone h3{font-size:15px;font-weight:600;margin-bottom:3px}
+.upload-zone{border-radius:var(--r-lg);background:var(--blue-lt);
+  padding:30px 20px;text-align:center;cursor:pointer;transition:background .2s;margin-bottom:14px}
+.menu-chev{transition:transform .2s}
+.upload-zone-ic{width:56px;height:56px;border-radius:50%;background:var(--blue);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:#fff}
+.upload-zone h3{font-size:15px;font-weight:700;margin-bottom:3px}
 .upload-zone p{font-size:12px;color:var(--tx2)}
+
+/* MENU LIST (BCA-style tappable rows) */
+.menu-row{display:flex;align-items:center;gap:12px;padding:13px 4px;cursor:pointer;
+  border-bottom:1px solid var(--divider)}
+.menu-row:last-child{border-bottom:none}
+.menu-row:active{background:var(--row-even)}
+.menu-ic{width:38px;height:38px;border-radius:11px;background:var(--blue-lt);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.menu-tx{flex:1;min-width:0}
+.menu-tx .t{font-size:13.5px;font-weight:600;color:var(--tx)}
+.menu-tx .s{font-size:11.5px;color:var(--tx2);margin-top:1px}
+.menu-chev{color:var(--tx3);flex-shrink:0}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -110,40 +231,50 @@ main{flex:1;padding:16px 16px 80px}
 .alert-info{background:var(--blue-lt);color:var(--blue);border-left:3px solid var(--blue)}
 
 /* ITEM CARD */
-.item-list{display:flex;flex-direction:column;gap:5px}
-.item-card{background:var(--card);border-radius:var(--r-md);box-shadow:var(--sh);
-  border-left:3px solid var(--bdr);padding:8px 10px 8px 11px}
-.item-card.done{border-left-color:var(--green)}
-/* ROW A: nama + kode + edit btn */
-.ic-a{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-.item-name{font-size:13px;font-weight:700;flex:1;min-width:0;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
-.item-code{font-size:10px;font-family:var(--fm);color:var(--tx3);white-space:nowrap;flex-shrink:0}
-/* ROW B: meta chips */
-.ic-b{display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap}
-.ic-chip{font-size:10px;color:var(--tx2);background:var(--row-even);
-  border-radius:3px;padding:1px 5px;white-space:nowrap}
-.ic-chip b{color:var(--tx);font-family:var(--fm)}
-.badge-edited{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;
-  background:#FFF3E0;color:#E65100;border:1px solid #FFCC02}
+.item-list{display:flex;flex-direction:column;gap:10px}
+.item-card{background:var(--card);border-radius:14px;box-shadow:var(--sh);padding:13px 14px;position:relative}
+.item-card::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;background:var(--bdr)}
+.item-card.done::before{background:var(--green)}
+/* ROW A: nama + kode */
+.ic-a{display:flex;align-items:flex-start;gap:6px;margin-bottom:2px}
+.item-name{font-size:11px;font-weight:500;flex:1;min-width:0;color:var(--tx3);line-height:1.3}
+.item-code{font-size:14px;font-weight:700;font-family:var(--fm);color:var(--tx);white-space:nowrap;flex-shrink:0}
+/* ROW B: meta chips (sistem + supplier + edit) */
+.ic-b{display:flex;align-items:center;gap:6px;margin:7px 0;flex-wrap:wrap;
+  padding-top:7px;border-top:1px solid var(--divider)}
+.ic-chip{font-size:10.5px;color:var(--tx2);background:var(--blue-lt);
+  border-radius:7px;padding:3px 8px;white-space:nowrap;font-weight:500}
+.ic-chip b{color:var(--blue-dk);font-family:var(--fm)}
+.badge-edited{font-size:9px;font-weight:700;padding:2px 6px;border-radius:7px;
+  background:var(--warn-lt);color:var(--warn)}
 .btn-edit-sistem{display:inline-flex;align-items:center;gap:2px;
-  background:transparent;border:1px solid var(--bdr);border-radius:4px;
-  padding:1px 6px;font-size:10px;font-weight:600;color:var(--tx3);
-  cursor:pointer;transition:all .15s;flex-shrink:0}
-.btn-edit-sistem:active{border-color:var(--blue);color:var(--blue);background:var(--blue-lt)}
+  background:transparent;border:none;border-radius:7px;
+  padding:3px 7px;font-size:10px;font-weight:600;color:var(--tx3);
+  cursor:pointer;transition:all .15s;flex-shrink:0;margin-left:auto}
+.btn-edit-sistem:active{color:var(--blue);background:var(--blue-lt)}
+/* ROW C2: batch & lokasi input langsung di card */
+.ic-bl{display:flex;gap:6px;margin-bottom:9px}
+.ic-bl-field{flex:1;min-width:0}
+.ic-bl-label{font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;
+  letter-spacing:.03em;margin-bottom:3px;display:flex;align-items:center;gap:2px}
+.ic-bl-input{width:100%;height:34px;padding:0 9px;border:none;
+  border-radius:9px;font-size:11.5px;font-family:var(--fm);color:var(--tx);
+  background:var(--row-even);outline:none;transition:background .15s}
+.ic-bl-input:focus{background:var(--blue-lt)}
+.ic-bl-input::placeholder{color:var(--tx3);font-family:var(--f)}
 /* ROW C: input fisik + selisih */
-.ic-c{display:flex;align-items:center;gap:6px}
+.ic-c{display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid var(--divider)}
 .ic-c-label{font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;flex:1}
 .fisik-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.fisik-input{width:76px;height:38px;padding:0 8px;border:2px solid var(--bdr);
-  border-radius:var(--r-sm);font-size:17px;font-weight:700;font-family:var(--fm);
-  color:var(--tx);background:var(--bg);text-align:right;outline:none;
-  transition:border-color .15s,background .15s;-moz-appearance:textfield}
+.fisik-input{width:84px;height:42px;padding:0 8px;border:none;
+  border-radius:11px;font-size:17px;font-weight:700;font-family:var(--fm);
+  color:var(--tx);background:var(--row-even);text-align:right;outline:none;
+  transition:background .15s,box-shadow .15s;-moz-appearance:textfield}
 .fisik-input::-webkit-outer-spin-button,.fisik-input::-webkit-inner-spin-button{-webkit-appearance:none}
-.fisik-input:focus{border-color:var(--blue);background:#fff}
-.fisik-input.filled{border-color:var(--green);background:var(--green-lt)}
+.fisik-input:focus{background:#fff;box-shadow:0 0 0 2px var(--blue)}
+.fisik-input.filled{background:var(--green-lt);box-shadow:0 0 0 1.5px var(--green) inset}
 .unit-badge{font-size:11px;font-weight:700;color:var(--tx2);min-width:22px}
-.selisih-tag{font-size:11px;font-weight:700;padding:3px 7px;border-radius:var(--r-sm);
+.selisih-tag{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;
   min-width:46px;text-align:center;flex-shrink:0}
 .selisih-pos{background:var(--blue-lt);color:var(--blue)}
 .selisih-neg{background:var(--err-lt);color:var(--err)}
@@ -242,8 +373,8 @@ td.zero{color:var(--green);font-weight:700}
 /* MODAL EDIT SISTEM */
 #modal-edit-sistem .modal-body{padding:18px 18px 24px}
 .edit-sistem-info{background:var(--blue-lt);border-radius:var(--r-md);padding:10px 12px;margin-bottom:14px}
-.edit-sistem-info .mat-name{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px}
-.edit-sistem-info .mat-code{font-size:11px;color:var(--tx2);font-family:var(--fm)}
+.edit-sistem-info .mat-code{font-size:14px;font-weight:700;color:var(--navy);font-family:var(--fm);margin-bottom:2px}
+.edit-sistem-info .mat-name{font-size:11px;color:var(--tx2)}
 .nilai-lama{display:flex;align-items:center;justify-content:space-between;
   padding:10px 12px;background:var(--row-even);border-radius:var(--r-md);margin-bottom:12px}
 .nilai-lama .lbl{font-size:11px;color:var(--tx2);font-weight:600;text-transform:uppercase}
@@ -291,7 +422,9 @@ td.zero{color:var(--green);font-weight:700}
   font-size:11px;font-weight:600;color:var(--tx2);background:var(--card);
   cursor:pointer;text-align:center;transition:all .15s}
 .mode-btn.active{border-color:var(--blue);color:var(--blue);background:var(--blue-lt)}
-.item-spec{font-size:11.5px;color:var(--tx2);margin-top:2px;line-height:1.35}
+.cloud-status.synced{color:var(--green)}
+.cloud-status.error{color:var(--err)}
+.item-spec{font-size:12.5px;font-weight:600;color:var(--tx2);margin-top:2px;line-height:1.35}
 .fisik-wrap{display:flex;align-items:center;gap:6px}
 .btn-calc{flex-shrink:0;width:38px;height:38px;border:2px solid var(--bdr);border-radius:var(--r-sm);
   background:#fff;color:var(--blue);font-size:16px;display:flex;align-items:center;justify-content:center}
@@ -304,11 +437,6 @@ td.zero{color:var(--green);font-weight:700}
 .calc-grid button.op{background:var(--blue-lt);color:var(--blue)}
 .calc-grid button.eq{background:var(--blue);color:#fff;grid-row:span 2}
 .calc-grid button.use{background:var(--green);color:#fff;grid-column:span 4}
-.share-link-box{display:flex;gap:6px;margin-top:10px}
-.share-link-box input{flex:1;height:40px;padding:0 10px;border:2px solid var(--bdr);border-radius:var(--r-sm);
-  font-size:11px;font-family:var(--fm);color:var(--tx2);background:var(--row-even)}
-.share-qr{text-align:center;margin:6px 0}
-.share-qr img{border-radius:var(--r-md);border:1px solid var(--bdr)}
 
 /* DESKTOP / LAPTOP LAYOUT */
 @media (min-width:860px){
@@ -325,59 +453,117 @@ td.zero{color:var(--green);font-weight:700}
 
 <!-- HEADER -->
 <header class="app-header">
-  <h1>StokSync <span class="vbadge">v4.0</span></h1>
-  <div class="hdr-sub">Stock Opname — PT Rayard Deli Indonesia</div>
+  <div class="hdr-row">
+    <div class="hdr-logo">RD</div>
+    <div class="hdr-tx">
+      <h1>RDI-STO <span class="vbadge">v1.6</span></h1>
+      <div class="hdr-sub">Stock Opname — PT Rayard Deli Indonesia</div>
+    </div>
+  </div>
+  <div class="steps" id="steps-bar">
+    <div class="steps-track">
+      <div class="step active" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <div class="step" id="step3"></div>
+      <div class="step" id="step4"></div>
+    </div>
+    <div class="steps-caption" id="steps-caption">Langkah <b>1/4</b> · Upload</div>
+  </div>
 </header>
-
-<!-- STEPS -->
-<div class="steps" id="steps-bar">
-  <div class="step active" id="step1"><div class="step-num">1</div><span>Upload</span></div>
-  <div class="step-line"></div>
-  <div class="step" id="step2"><div class="step-num">2</div><span>Sampling</span></div>
-  <div class="step-line"></div>
-  <div class="step" id="step3"><div class="step-num">3</div><span>Hitung</span></div>
-  <div class="step-line"></div>
-  <div class="step" id="step4"><div class="step-num">4</div><span>Hasil</span></div>
-</div>
 
 <main>
 
 <!-- PAGE 1: UPLOAD -->
-<div id="page-upload" class="page active">
-  <div class="card">
-    <div class="upload-zone" id="upload-zone">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M12 16V4m0 0L8 8m4-4l4 4"/>
-        <path d="M20 16.7A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/>
-      </svg>
-      <h3>Upload Data Stok Sistem</h3>
-      <p>File Excel dari ERP / inventory sistem</p>
-      <p style="margin-top:3px;color:var(--tx3);font-size:11px">.xlsx / .xls · maks 10 MB</p>
+<!-- PAGE: ACCOUNT SELECT -->
+<div id="page-account" class="page active">
+  <div class="acc-hero">
+    <div class="acc-hero-logo">📦</div>
+    <h2>RDI-STO <span class="vbadge">v1.6</span></h2>
+    <p>PT Rayard Deli Indonesia · Stock Opname</p>
+  </div>
+  <div style="margin-top:20px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Pilih Gudang</span>
+    <button onclick="openAccountConfig()" style="background:none;border:none;font-size:11.5px;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Kelola
+    </button>
+  </div>
+  <div id="account-list" class="acc-grid"></div>
+  <p style="text-align:center;font-size:11px;color:var(--tx3);margin-top:20px">Setiap gudang tersimpan di sheet terpisah</p>
+</div>
+
+<div id="page-upload" class="page">
+  <div class="acc-bar" id="acc-bar-el" style="border-left-color:var(--blue)">
+    <button onclick="showPage('page-account')" style="background:none;border:none;padding:4px 2px;color:var(--tx3);cursor:pointer;display:flex">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="acc-bar-dot" id="acc-bar-dot" style="background:var(--blue)"></div>
+    <div class="acc-bar-info">
+      <div class="acc-bar-name" id="active-account-label">—</div>
+      <div class="acc-bar-sheet" id="active-account-badge">Pilih gudang dulu</div>
     </div>
-    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
-    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Pilih File Excel
-    </button>
-    <button class="btn btn-ghost" onclick="downloadTemplate()" style="margin-top:4px">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Unduh Template Excel
+    <button onclick="openConfig()" style="background:none;border:none;padding:6px;color:var(--tx3);cursor:pointer;display:flex">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
   </div>
-  <div class="card" id="upload-resume-card" style="display:none">
-    <p style="font-size:12.5px;color:var(--tx2)">📲 Ada data terkirim dari PC/HP lain? Buka link/QR yang dibagikan — data otomatis termuat di sini.</p>
+  <div class="card">
+    <div class="upload-zone" id="upload-zone-cloud" onclick="loadMasterFromCloud()">
+      <div class="upload-zone-ic">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 16.7A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/>
+        </svg>
+      </div>
+      <h3>Tarik Master dari Cloud</h3>
+      <p>Sinkron data stok terbaru dari Sheet</p>
+      <p style="margin-top:3px;color:var(--tx3);font-size:11px">Butuh Cloud Sync URL · diatur di ⚙ Header</p>
+    </div>
+    <button class="btn btn-primary" onclick="loadMasterFromCloud()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16.7A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/></svg>
+      Tarik Data dari Cloud
+    </button>
+
+    <div class="menu-row" id="excel-toggle-row" onclick="toggleExcelUpload()" style="margin-top:10px">
+      <div class="menu-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <div class="menu-tx"><div class="t">Upload Excel Manual</div><div class="s">Alternatif · file dari ERP / sistem lain</div></div>
+      <svg class="menu-chev" id="excel-toggle-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div id="excel-upload-panel" style="display:none;margin-top:8px">
+      <div class="tmpl-box">
+        <h4>Kolom dalam template (stok sistem dari Excel):</h4>
+        <ul>
+          <li>Material Code</li><li>Material Name</li><li>Spesifikasi</li>
+          <li>Batch</li><li>Stok Inventory</li><li>Unit</li><li>Supplier</li>
+        </ul>
+        <p style="color:rgba(255,255,255,.4);font-size:10px;margin-top:7px">
+          ⚡ Stok Fisik diinput langsung di HP saat hitung lapangan — tidak perlu di Excel
+        </p>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
+      <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Pilih File Excel
+      </button>
+      <input type="file" id="admin-file-input" accept=".xlsx,.xls" style="display:none" onchange="if(this.files[0])pushExcelToCloud(this.files[0])">
+      <button class="btn btn-ghost" onclick="document.getElementById('admin-file-input').click()" style="margin-top:4px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16.7A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/></svg>
+        Push Excel ke Cloud <span style="opacity:.55">· Admin</span>
+      </button>
+      <button class="btn btn-ghost" onclick="downloadTemplate()" style="margin-top:4px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Unduh Template Excel
+      </button>
+    </div>
   </div>
-  <div class="tmpl-box">
-    <h4>Kolom dalam template (stok sistem dari Excel):</h4>
-    <ul>
-      <li>Material Code</li><li>Material Name</li><li>Spesifikasi</li>
-      <li>Batch</li><li>Stok Inventory</li><li>Unit</li><li>Supplier</li>
-    </ul>
-    <p style="color:rgba(255,255,255,.4);font-size:10px;margin-top:7px">
-      ⚡ Stok Fisik diinput langsung di HP saat hitung lapangan — tidak perlu di Excel
-    </p>
+
+  <div class="card">
+    <div class="menu-row" onclick="openDashboard()">
+      <div class="menu-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
+      <div class="menu-tx"><div class="t">Dashboard Tim & Tren</div><div class="s">Pantau progres multi-operator</div></div>
+      <svg class="menu-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
   </div>
 </div>
+
 
 <!-- PAGE: LOADING -->
 <div id="page-loading" class="page">
@@ -424,7 +610,6 @@ td.zero{color:var(--green);font-weight:700}
       🎲 Acak &amp; Mulai STO
     </button>
     <button class="btn btn-ghost" onclick="applySamplingAll()" style="margin-top:4px">STO semua item (tanpa sampling)</button>
-    <button class="btn btn-ghost" onclick="openShare()" style="margin-top:4px">📲 Kirim Data ke HP Lain</button>
   </div>
 </div>
 
@@ -455,6 +640,10 @@ td.zero{color:var(--green);font-weight:700}
     <div class="ftab" onclick="setFilter('pending',this)">Belum diisi</div>
     <div class="ftab" onclick="setFilter('done',this)">Sudah diisi</div>
   </div>
+  <select id="lokasi-filter" onchange="setLokasiFilter(this.value)"
+    style="width:100%;height:38px;margin:8px 0 4px;border:2px solid var(--bdr);border-radius:var(--r-sm);padding:0 10px;font-size:13px;color:var(--tx);background:#fff" >
+    <option value="">📍 Semua Lokasi</option>
+  </select>
 
   <div class="item-list" id="item-list"></div>
 
@@ -469,16 +658,41 @@ td.zero{color:var(--green);font-weight:700}
 <!-- PAGE 3: HASIL -->
 <div id="page-result" class="page">
   <div id="result-banner"></div>
+  <div id="recount-banner"></div>
+  <div id="lokasi-export-box" style="display:none;margin-bottom:10px">
+    <select id="lokasi-export-select" style="width:100%;height:38px;border:2px solid var(--bdr);border-radius:var(--r-sm);padding:0 10px;font-size:13px;margin-bottom:6px"></select>
+    <button class="btn btn-ghost" onclick="exportPdfPerLokasi()">📄 Export PDF Lokasi Terpilih</button>
+  </div>
   <div class="sto-stats" id="sto-stats"></div>
+  <div id="workflow-bar" style="margin-bottom:10px"></div>
+  <div id="sto-bar"></div>
   <div class="summary-bar" id="summary-bar"></div>
+
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px" id="material-summary-card">
+    <div style="padding:10px 14px;font-weight:700;font-size:13px;border-bottom:1px solid var(--bdr)">
+      📦 Ringkasan per Material (total semua batch &amp; lokasi)
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Material Code</th><th>Material Name</th><th>Spesifikasi</th>
+          <th style="text-align:right">Total Sistem</th>
+          <th style="text-align:right">Total Fisik</th>
+          <th style="text-align:right">Selisih</th>
+          <th style="text-align:center">Status</th>
+        </tr></thead>
+        <tbody id="material-summary-body"></tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="card" style="padding:0;overflow:hidden">
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>No</th><th>Material Code</th><th>Material Name</th>
-            <th>Batch</th><th>Supplier</th><th style="text-align:right">Stok Sistem</th>
+            <th>No</th><th>Material Code</th><th>Spesifikasi</th><th>Material Name</th>
+            <th>Batch</th><th>Lokasi</th><th>Supplier</th><th style="text-align:right">Stok Sistem</th>
             <th style="text-align:right">Stok Fisik</th>
             <th style="text-align:right">Selisih</th>
             <th style="text-align:center">Status</th><th>Unit</th>
@@ -494,9 +708,30 @@ td.zero{color:var(--green);font-weight:700}
     <button class="btn btn-ghost btn-sm" onclick="backToInput()" style="flex:0 0 auto;width:auto;padding:0 14px">← Edit</button>
     <button class="btn btn-secondary btn-sm" onclick="openConfig()" style="flex:0 0 auto;width:auto">⚙ Header</button>
     <button class="btn btn-green" id="btn-export" onclick="exportPdf()">
-      Export PDF A4
+      Export PDF Landscape
     </button>
   </div>
+</div>
+
+<!-- PAGE: DASHBOARD TIM & TREN (Season 4) -->
+<div id="page-dashboard" class="page">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0">📊 Dashboard Tim</h3>
+      <button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="showPage('page-upload')">← Kembali</button>
+    </div>
+    <p style="font-size:11px;color:var(--tx3);margin-bottom:8px">Grup STO: <span class="mono" id="dash-gid">—</span></p>
+    <button class="btn btn-secondary btn-sm" style="margin:0" onclick="refreshDashboard()">🔄 Refresh</button>
+  </div>
+  <div class="card" id="dash-sessions-card">
+    <h4 style="margin:0 0 8px;font-size:13px">Sesi Aktif per Operator/Area</h4>
+    <div id="dash-sessions">—</div>
+  </div>
+  <div class="card" id="dash-trend-card">
+    <h4 style="margin:0 0 8px;font-size:13px">Tren Selisih per Periode</h4>
+    <div id="dash-trend">—</div>
+  </div>
+  <div style="height:24px"></div>
 </div>
 
 </main>
@@ -520,6 +755,45 @@ td.zero{color:var(--green);font-weight:700}
       <div class="field"><label>Lokasi Gudang</label>
         <input id="f-loc" type="text" placeholder="Gudang Utama — Kutanegara, Karawang"></div>
       <button class="btn btn-primary" onclick="saveConfig()">Simpan & Tutup</button>
+
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--divider)">
+        <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:5px">👥 Tim STO (Multi-Operator)</label>
+        <input id="f-operator" type="text" style="width:100%;height:44px;padding:0 12px;margin-bottom:8px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:12px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none" placeholder="Nama operator (mis. Budi)">
+        <input id="f-area" type="text" style="width:100%;height:44px;padding:0 12px;margin-bottom:8px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:12px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none" placeholder="Area/zona dihitung (mis. Rak A1-A5)">
+        <input id="f-group" type="text" style="width:100%;height:44px;padding:0 12px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:12px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none" placeholder="ID Grup STO (kosongkan = buat baru)">
+        <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px" onclick="saveTeamInfo()">Simpan</button>
+      </div>
+
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--divider)">
+        <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:5px">☁️ Cloud Sync URL (Apps Script)</label>
+        <input id="f-cloud-url" type="text" style="width:100%;height:44px;padding:0 12px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:12px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none" placeholder="https://script.google.com/macros/s/.../exec">
+        <div id="cloud-status" class="cloud-status" style="font-size:11px;margin:6px 0;color:var(--tx3)"></div>
+        <div style="font-size:10.5px;color:var(--tx3);margin-bottom:8px">ID Sesi: <span class="mono" id="cloud-sid">—</span></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" style="flex:1;margin-top:0" onclick="saveCloudUrl()">Simpan URL</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;margin-top:0" onclick="manualRestoreCloud()">Pulihkan dari Cloud</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ACCOUNT CONFIG -->
+<div class="modal-overlay" id="account-config-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Kelola Gudang</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeAccountConfig()" style="width:auto;margin:0">Tutup</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--tx3);margin-bottom:14px;line-height:1.6">Setiap gudang membaca & menyimpan data ke <b>sheet terpisah</b> dalam satu Spreadsheet Google yang sama. URL Apps Script kini <b>satu untuk semua gudang</b> — atur di <span style="cursor:pointer;text-decoration:underline;color:var(--blue)" onclick="closeAccountConfig();openConfig()">⚙ Header</span>.</p>
+      <div id="account-config-list"></div>
+      <button class="btn btn-secondary" onclick="addAccount()" style="margin-top:4px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Tambah Gudang Baru
+      </button>
+      <button class="btn btn-primary" onclick="saveAccounts()" style="margin-top:6px">Simpan & Tutup</button>
     </div>
   </div>
 </div>
@@ -534,8 +808,8 @@ td.zero{color:var(--green);font-weight:700}
     </div>
     <div class="modal-body">
       <div class="edit-sistem-info">
-        <div class="mat-name" id="esm-name">—</div>
         <div class="mat-code" id="esm-code">—</div>
+        <div class="mat-name" id="esm-name">—</div>
       </div>
       <div class="nilai-lama">
         <div>
@@ -549,8 +823,11 @@ td.zero{color:var(--green);font-weight:700}
       <div class="edit-unit-label" id="esm-unit-new">—</div>
       <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin:12px 0 5px">Batch / No. Lot</label>
       <input type="text" id="esm-batch" style="width:100%;height:44px;padding:0 14px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:15px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none;transition:border-color .15s" placeholder="Contoh: BTH-2026-01" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--bdr)'">
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin:12px 0 5px">Lokasi / Rak</label>
+      <input type="text" id="esm-lokasi" style="width:100%;height:44px;padding:0 14px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:15px;font-family:var(--fm);color:var(--tx);background:#fff;outline:none;transition:border-color .15s" placeholder="Contoh: Gudang A - Rak 3" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--bdr)'">
       <label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em;display:block;margin:12px 0 5px">Supplier</label>
       <input type="text" id="esm-supplier" style="width:100%;height:44px;padding:0 14px;border:2px solid var(--bdr);border-radius:var(--r-md);font-size:15px;font-family:var(--f);color:var(--tx);background:#fff;outline:none;transition:border-color .15s" placeholder="Nama supplier" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--bdr)'">
+      <div id="esm-log" style="font-size:10.5px;color:var(--tx3);margin-top:8px;line-height:1.5"></div>
       <div class="btn-group-edit">
         <button class="btn btn-secondary" onclick="closeEditSistem()" style="flex:0 0 auto;width:auto;padding:0 16px">Batal</button>
         <button class="btn btn-primary" onclick="saveEditSistem()">Simpan Perubahan</button>
@@ -584,25 +861,6 @@ td.zero{color:var(--green);font-weight:700}
   </div>
 </div>
 
-<!-- MODAL SHARE / KIRIM KE HP -->
-<div class="modal-overlay" id="modal-share" onclick="if(event.target===this)closeShare()">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h2>Kirim Data ke HP</h2>
-      <button class="btn btn-ghost btn-sm" onclick="closeShare()" style="width:auto;margin:0">Tutup</button>
-    </div>
-    <div class="modal-body" id="share-body">
-      <p style="font-size:12.5px;color:var(--tx2);margin-bottom:8px">Scan QR ini pakai kamera HP, atau salin link dan kirim via WhatsApp/email. Data terbuka otomatis di HP — tidak perlu upload ulang.</p>
-      <div class="share-qr" id="share-qr"></div>
-      <div class="share-link-box">
-        <input type="text" id="share-link-input" readonly>
-        <button class="btn btn-primary btn-sm" style="width:auto;padding:0 14px" onclick="copyShareLink()">Salin</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -611,15 +869,164 @@ td.zero{color:var(--green);font-weight:700}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 
 <script>
-const REQUIRED_HEADERS = ['Material Code','Material Name','Spesifikasi','Batch','Stok Inventory','Unit','Supplier'];
+const REQUIRED_HEADERS = ['Material Code','Material Name','Spesifikasi','Batch','Lokasi','Stok Inventory','Unit','Supplier'];
+const OPTIONAL_HEADERS = ['Lokasi'];
 const MAX_FILE = 10*1024*1024;
-let appState = { rows: [], allRows: [], docConfig: {}, filter: 'all', samplingPct: null };
+/* === MULTI-ACCOUNT === */
+const ACC_COLORS = ['#2563EB','#059669','#D97706','#7C3AED','#DC2626','#0891B2','#DB2777'];
+const ACC_ICONS  = ['🏭','🏢','🏗','🏬','📦','🚛','🔧'];
+const DEFAULT_ACCOUNTS = [
+  {id:'gudang-a', name:'Gudang A', sheetName:'GudangA', color:'#2563EB', icon:'🏭'},
+  {id:'gudang-b', name:'Gudang B', sheetName:'GudangB', color:'#059669', icon:'🏢'},
+  {id:'gudang-c', name:'Gudang C', sheetName:'GudangC', color:'#D97706', icon:'🏗'}
+];
+function getAccounts() {
+  try { return JSON.parse(localStorage.getItem('sto_accounts')) || DEFAULT_ACCOUNTS; }
+  catch(e) { return DEFAULT_ACCOUNTS; }
+}
+function saveAccountsToStorage(arr) { localStorage.setItem('sto_accounts', JSON.stringify(arr)); }
+function getActiveAccount() {
+  const id = localStorage.getItem('sto_active_account');
+  return getAccounts().find(a => a.id === id) || null;
+}
+
+function renderAccountPage() {
+  const accounts = getAccounts();
+  const activeId  = localStorage.getItem('sto_active_account');
+  const hasUrl    = !!(localStorage.getItem('sto_cloud_url')||'').trim();
+  document.getElementById('account-list').innerHTML = accounts.map(a => {
+    const isActive = a.id === activeId;
+    return `<div class="acc-tile${isActive?' selected':''}" onclick="selectAccount('${a.id}')"
+      style="background:linear-gradient(135deg,${a.color} 0%,${darken(a.color)} 100%)">
+      <div class="acc-tile-top">
+        <div class="acc-tile-icon">${a.icon||'📦'}</div>
+        <div class="acc-tile-info">
+          <div class="acc-tile-name">${esc(a.name)}</div>
+          <div class="acc-tile-sheet">Sheet: ${esc(a.sheetName||a.id)}</div>
+        </div>
+        <svg class="acc-tile-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="acc-tile-status">
+        <div class="acc-tile-dot ${hasUrl?'ok':'warn'}"></div>
+        <span>${hasUrl ? 'Cloud URL tersimpan' : 'Belum ada Cloud URL — tap Kelola'}</span>
+        ${isActive?'<span style="margin-left:auto;font-size:10px;background:rgba(255,255,255,.2);padding:1px 8px;border-radius:20px;color:#fff;font-weight:700">AKTIF</span>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function darken(hex) {
+  // darken hex color by ~20% for gradient
+  const n = parseInt(hex.slice(1),16);
+  const r = Math.max(0,((n>>16)&255)-40);
+  const g = Math.max(0,((n>>8)&255)-40);
+  const b = Math.max(0,(n&255)-40);
+  return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+function selectAccount(id) {
+  const acc = getAccounts().find(a => a.id === id);
+  if (!acc) return;
+  localStorage.setItem('sto_active_account', id);
+  appState.sessionId = null; localStorage.removeItem('sto_session_id');
+  // update acc-bar
+  document.getElementById('active-account-label').textContent = acc.name;
+  document.getElementById('active-account-badge').textContent = 'Sheet: ' + (acc.sheetName||acc.id);
+  const bar = document.getElementById('acc-bar-el');
+  const dot = document.getElementById('acc-bar-dot');
+  if(bar) bar.style.borderLeftColor = acc.color||'var(--blue)';
+  if(dot) dot.style.background = acc.color||'var(--blue)';
+  renderAccountPage();
+  showPage('page-upload');
+}
+
+function openAccountConfig() {
+  renderAccountConfigList();
+  document.getElementById('account-config-modal').classList.add('open');
+}
+function closeAccountConfig() {
+  document.getElementById('account-config-modal').classList.remove('open');
+  renderAccountPage();
+}
+
+function renderAccountConfigList() {
+  const accounts = getAccounts();
+  document.getElementById('account-config-list').innerHTML = accounts.map((a,i) => `
+    <div class="acc-cfg-item" style="border-left:3px solid ${a.color||'#2563EB'}">
+      <button class="acc-del-btn" onclick="deleteAccount(${i})" title="Hapus">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+      <label>Nama Gudang</label>
+      <input value="${esc(a.name)}" oninput="updateAccField(${i},'name',this.value)" placeholder="Contoh: Gudang Utama">
+      <label>Nama Sheet (di Spreadsheet Google)</label>
+      <input value="${esc(a.sheetName||'')}" oninput="updateAccField(${i},'sheetName',this.value)" placeholder="Contoh: GudangA" style="font-family:var(--fm);font-size:12px">
+      <label>Warna & Ikon</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="acc-cfg-color-row">
+          ${ACC_COLORS.map(c=>`<div class="acc-color-dot${a.color===c?' sel':''}" style="background:${c}" onclick="updateAccField(${i},'color','${c}');renderAccountConfigList()"></div>`).join('')}
+        </div>
+        <select onchange="updateAccField(${i},'icon',this.value)" style="height:32px;border:1.5px solid var(--bdr);border-radius:6px;padding:0 6px;font-size:16px">
+          ${ACC_ICONS.map(ic=>`<option value="${ic}"${a.icon===ic?' selected':''}>${ic}</option>`).join('')}
+        </select>
+      </div>
+    </div>`).join('');
+}
+
+function updateAccField(i, field, val) {
+  const arr = getAccounts(); arr[i][field] = val; saveAccountsToStorage(arr);
+}
+function deleteAccount(i) {
+  const arr = getAccounts();
+  if(arr.length<=1){showToast('Minimal 1 gudang','error');return;}
+  if(!confirm(`Hapus "${arr[i].name}"?`))return;
+  arr.splice(i,1); saveAccountsToStorage(arr); renderAccountConfigList();
+}
+function addAccount() {
+  const arr = getAccounts();
+  const ci = arr.length % ACC_COLORS.length;
+  arr.push({id:'gudang-'+Date.now().toString(36), name:'Gudang Baru',
+    sheetName:'GudangBaru', color:ACC_COLORS[ci], icon:ACC_ICONS[ci]||'📦'});
+  saveAccountsToStorage(arr); renderAccountConfigList();
+}
+function saveAccounts() {
+  closeAccountConfig();
+  showToast('Gudang disimpan','success');
+}
+
+/* === END MULTI-ACCOUNT === */
+
+/* Migrasi: URL Apps Script dulu per-akun, sekarang global. Kalau belum ada URL
+   global tapi ada akun lama yang punya url sendiri, pakai itu sebagai default. */
+(function migrateAccountUrlToGlobal() {
+  try {
+    if ((localStorage.getItem('sto_cloud_url')||'').trim()) return;
+    const accs = JSON.parse(localStorage.getItem('sto_accounts')||'[]');
+    const found = (accs||[]).find(a => (a.url||'').trim());
+    if (found) localStorage.setItem('sto_cloud_url', found.url.trim());
+  } catch(e) {}
+})();
+
+let appState = { rows: [], allRows: [], docConfig: {}, filter: 'all', samplingPct: null,
+  sessionId: localStorage.getItem('sto_session_id') || null,
+  cloudUrl: localStorage.getItem('sto_cloud_url') || '',
+  operator: localStorage.getItem('sto_operator') || '',
+  groupId: localStorage.getItem('sto_group_id') || '',
+  area: localStorage.getItem('sto_area') || '',
+  status: 'draft' };
+function ensureSessionId() {
+  if (!appState.sessionId) {
+    appState.sessionId = 'sto_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('sto_session_id', appState.sessionId);
+  }
+  return appState.sessionId;
+}
 
 /* === PAGE / STEP NAV === */
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+const STEP_LABELS=['Upload','Sampling','Hitung','Hasil'];
 function setStep(n) {
   [1,2,3,4].forEach(i => {
     const s = document.getElementById('step'+i);
@@ -627,16 +1034,20 @@ function setStep(n) {
     if (i < n) s.classList.add('done');
     else if (i === n) s.classList.add('active');
   });
+  document.getElementById('steps-caption').innerHTML = 'Langkah <b>'+n+'/4</b> · '+STEP_LABELS[n-1];
 }
 
 /* === UPLOAD === */
-const zone = document.getElementById('upload-zone');
-const fi   = document.getElementById('file-input');
-zone.addEventListener('click', () => fi.click());
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+const fi = document.getElementById('file-input');
 fi.addEventListener('change', () => { if(fi.files[0]) handleFile(fi.files[0]); });
+
+function toggleExcelUpload() {
+  const panel = document.getElementById('excel-upload-panel');
+  const chev  = document.getElementById('excel-toggle-chev');
+  const open  = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  chev.style.transform = open ? '' : 'rotate(180deg)';
+}
 
 async function handleFile(file) {
   if (!file.name.match(/\.(xlsx|xls)$/i)) return showToast('File harus .xlsx atau .xls','error');
@@ -650,17 +1061,18 @@ async function handleFile(file) {
     const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
     if (!raw.length) throw new Error('File kosong.');
     const hrow = raw[0].map(h => String(h).trim());
-    const miss = REQUIRED_HEADERS.filter(h => !hrow.includes(h));
+    const miss = REQUIRED_HEADERS.filter(h => !OPTIONAL_HEADERS.includes(h) && !hrow.includes(h));
     if (miss.length) throw new Error('Kolom tidak ditemukan: '+miss.join(', '));
     document.getElementById('loading-msg').textContent = 'Memproses data…';
     const idx = {};
-    REQUIRED_HEADERS.forEach(h => idx[h] = hrow.indexOf(h));
+    REQUIRED_HEADERS.forEach(h => idx[h] = hrow.indexOf(h)); // -1 jika kolom opsional tak ada
     const rows = raw.slice(1)
       .map((r,i) => ({
         materialCode: String(r[idx['Material Code']]??'').trim(),
         materialName: String(r[idx['Material Name']]??'').trim(),
         spesifikasi:  String(r[idx['Spesifikasi']]??'').trim(),
         batch:        String(r[idx['Batch']]??'').trim(),
+        lokasi:       idx['Lokasi']>-1 ? String(r[idx['Lokasi']]??'').trim() : '',
         stokSistem:   Number(r[idx['Stok Inventory']]),
         unit:         String(r[idx['Unit']]??'').trim(),
         supplier:     String(r[idx['Supplier']]??'').trim(),
@@ -669,6 +1081,10 @@ async function handleFile(file) {
       }))
       .filter(r => r.materialCode || r.materialName);
     if (!rows.length) throw new Error('Tidak ada data baris.');
+    const dupKeys = {};
+    rows.forEach(r => { const k = r.materialCode+'|'+r.batch+'|'+r.lokasi; dupKeys[k] = (dupKeys[k]||0)+1; });
+    const dupList = Object.entries(dupKeys).filter(([,c])=>c>1).map(([k])=>k.split('|')[0]+' / '+k.split('|')[1]);
+    if (dupList.length) showToast(`⚠ ${dupList.length} kombinasi Material+Batch+Lokasi duplikat terdeteksi: ${dupList.slice(0,3).join(', ')}${dupList.length>3?'…':''}`, 'error');
     appState.rows = rows;
     appState.allRows = rows; // simpan semua untuk reroll
     loadConfig();
@@ -684,6 +1100,89 @@ async function handleFile(file) {
     showToast(err.message,'error');
   }
   fi.value='';
+}
+
+async function pushExcelToCloud(file) {
+  if (!appState.cloudUrl) { document.getElementById('admin-file-input').value=''; openConfig(); return showToast('Isi Cloud Sync URL dulu di ⚙ Header','error'); }
+  if (!file.name.match(/\.(xlsx|xls)$/i)) return showToast('File harus .xlsx atau .xls','error');
+  if (file.size > MAX_FILE) return showToast('File melebihi 10 MB','error');
+  showPage('page-loading');
+  document.getElementById('loading-msg').textContent = 'Membaca file Excel…';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, {type:'array'});
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    if (!raw.length) throw new Error('File kosong.');
+    const hrow = raw[0].map(h => String(h).trim());
+    const miss = REQUIRED_HEADERS.filter(h => !OPTIONAL_HEADERS.includes(h) && !hrow.includes(h));
+    if (miss.length) throw new Error('Kolom tidak ditemukan: '+miss.join(', '));
+    const idx = {};
+    REQUIRED_HEADERS.forEach(h => idx[h] = hrow.indexOf(h));
+    const rows = raw.slice(1).map(r => ({
+      MaterialCode: String(r[idx['Material Code']]??'').trim(),
+      MaterialName: String(r[idx['Material Name']]??'').trim(),
+      Spesifikasi:  String(r[idx['Spesifikasi']]??'').trim(),
+      Batch:        String(r[idx['Batch']]??'').trim(),
+      Lokasi:       idx['Lokasi']>-1 ? String(r[idx['Lokasi']]??'').trim() : '',
+      StokSistem:   Number(r[idx['Stok Inventory']])||0,
+      Unit:         String(r[idx['Unit']]??'').trim(),
+      Supplier:     String(r[idx['Supplier']]??'').trim()
+    })).filter(r => r.MaterialCode || r.MaterialName);
+    if (!rows.length) throw new Error('Tidak ada data baris.');
+    document.getElementById('loading-msg').textContent = 'Mengirim '+rows.length+' baris ke Cloud…';
+    const CHUNK = 300;
+    let sent = 0;
+    for (let i=0; i<rows.length; i+=CHUNK) {
+      const chunk = rows.slice(i, i+CHUNK);
+      const res = await fetch(appState.cloudUrl, { method:'POST', body: JSON.stringify({ action:'upsertMaster', sheetName: (getActiveAccount()||{}).sheetName||localStorage.getItem('sto_active_account')||'default', rows: chunk }) });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Gagal push chunk ke Cloud');
+      sent += json.count;
+      document.getElementById('loading-msg').textContent = `Mengirim… ${sent}/${rows.length}`;
+    }
+    showPage('page-upload');
+    showToast('Master cloud diperbarui: '+sent+' baris','success');
+  } catch(err) {
+    showPage('page-upload');
+    showToast(err.message,'error');
+  }
+  document.getElementById('admin-file-input').value='';
+}
+
+async function loadMasterFromCloud() {
+  if (!appState.cloudUrl) { openConfig(); return showToast('Isi Cloud Sync URL dulu di ⚙ Header','error'); }
+  showPage('page-loading');
+  document.getElementById('loading-msg').textContent = 'Mengambil master data dari Cloud…';
+  try {
+    const res = await fetch(appState.cloudUrl, { method:'POST', body: JSON.stringify({ action:'getMaster', sheetName: (getActiveAccount()||{}).sheetName||localStorage.getItem('sto_active_account')||'default' }) });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Gagal mengambil master');
+    const rows = (json.rows||[]).map((r,i) => ({
+      materialCode: String(r.MaterialCode||'').trim(),
+      materialName: String(r.MaterialName||'').trim(),
+      spesifikasi:  String(r.Spesifikasi||'').trim(),
+      batch:        String(r.Batch||'').trim(),
+      lokasi:       String(r.Lokasi||'').trim(),
+      stokSistem:   Number(r.StokSistem)||0,
+      unit:         String(r.Unit||'').trim(),
+      supplier:     String(r.Supplier||'').trim(),
+      stokFisik:    null,
+      _id: i
+    })).filter(r => r.materialCode || r.materialName);
+    if (!rows.length) throw new Error('Master kosong. Isi sheet MasterMaterial dulu.');
+    appState.rows = rows; appState.allRows = rows;
+    loadConfig();
+    document.getElementById('smp-total').textContent = rows.length;
+    document.getElementById('smp-fix-input').max = rows.length;
+    document.getElementById('smp-fix-input').value = Math.ceil(rows.length * 0.3);
+    updateSamplingPreview();
+    showPage('page-sampling'); setStep(2);
+    showToast('Master live berhasil dimuat ('+rows.length+' baris)','success');
+  } catch(err) {
+    showPage('page-upload');
+    showToast(err.message,'error');
+  }
 }
 
 /* === SAMPLING ACAK === */
@@ -773,15 +1272,28 @@ function setFilter(f, el) {
 }
 
 function renderInputPage() {
+  populateLokasiFilter();
   renderItemList();
   updateProgress();
+  autoSaveProgress();
 }
+
+function populateLokasiFilter() {
+  const sel = document.getElementById('lokasi-filter');
+  const locs = [...new Set(appState.rows.map(r=>r.lokasi).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">📍 Semua Lokasi</option>' +
+    locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+  sel.value = appState.lokasiFilter || '';
+}
+function setLokasiFilter(v) { appState.lokasiFilter = v; renderItemList(); }
 
 function renderItemList() {
   const f = appState.filter;
+  const lf = appState.lokasiFilter;
   const rows = appState.rows.filter(r => {
-    if (f === 'pending') return r.stokFisik === null;
-    if (f === 'done')    return r.stokFisik !== null;
+    if (f === 'pending' && r.stokFisik !== null) return false;
+    if (f === 'done' && r.stokFisik === null) return false;
+    if (lf && r.lokasi !== lf) return false;
     return true;
   });
   const list = document.getElementById('item-list');
@@ -796,18 +1308,31 @@ function renderItemList() {
     const selTxt = sel===null?'—':(sel>0?'+':'')+sel.toLocaleString('id-ID');
     return `<div class="item-card ${isDone?'done':'pending'}" id="icard-${r._id}">
   <div class="ic-a">
-    <div class="item-name">${esc(r.materialName)||'—'}</div>
-    <div class="item-code">${esc(r.materialCode)}</div>
-    ${r.spesifikasi?`<div class="item-spec">${esc(r.spesifikasi)}</div>`:''}
-    <button class="btn-edit-sistem" onclick="openEditSistem(${r._id})" title="Edit">
-      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
-    </button>
+    <div style="flex:1;min-width:0">
+      <div class="item-code">${esc(r.materialCode)}</div>
+      ${r.spesifikasi?`<div class="item-spec">${esc(r.spesifikasi)}</div>`:''}
+      <div class="item-name">${esc(r.materialName)||'—'}</div>
+    </div>
   </div>
   <div class="ic-b">
     <span class="ic-chip">Sistem <b>${isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID')} ${esc(r.unit)}</b></span>
-    <span class="ic-chip">Batch <b>${esc(r.batch)||'—'}</b></span>
     ${r.supplier?`<span class="ic-chip">Supp <b>${esc(r.supplier)}</b></span>`:''}
     ${r._sistemEdited?'<span class="badge-edited">EDITED</span>':''}
+    <button class="btn-edit-sistem" onclick="openEditSistem(${r._id})" title="Edit Stok Sistem">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+    </button>
+  </div>
+  <div class="ic-bl">
+    <div class="ic-bl-field">
+      <div class="ic-bl-label">🏷️ Batch</div>
+      <input type="text" class="ic-bl-input" id="batch-${r._id}" value="${esc(r.batch)}"
+        placeholder="No. batch" onchange="setBatch(${r._id},this.value)">
+    </div>
+    <div class="ic-bl-field">
+      <div class="ic-bl-label">📍 Lokasi</div>
+      <input type="text" class="ic-bl-input" id="lokasi-${r._id}" value="${esc(r.lokasi)}"
+        placeholder="Rak/area" onchange="setLokasi(${r._id},this.value)">
+    </div>
   </div>
   <div class="ic-c">
     <div class="ic-c-label">Stok Fisik</div>
@@ -822,6 +1347,20 @@ function renderItemList() {
   </div>
 </div>`;
   }).join('');
+}
+
+function setBatch(id, val) {
+  const row = appState.rows.find(r => r._id === id);
+  if (!row) return;
+  row.batch = val.trim();
+  autoSaveProgress();
+}
+function setLokasi(id, val) {
+  const row = appState.rows.find(r => r._id === id);
+  if (!row) return;
+  row.lokasi = val.trim();
+  populateLokasiFilter();
+  autoSaveProgress();
 }
 
 function setFisik(id, val) {
@@ -842,6 +1381,7 @@ function setFisik(id, val) {
     selTag.textContent = selisih === null ? '—' : (selisih > 0 ? '+' : '') + selisih.toLocaleString('id-ID');
   }
   updateProgress();
+  autoSaveProgress();
 }
 
 function updateProgress() {
@@ -868,8 +1408,38 @@ function backToInput() {
   updateProgress();
 }
 
+/* === APPROVAL WORKFLOW: draft -> submitted -> reviewed -> approved === */
+const WF_LABEL = { draft:'📝 Draft', submitted:'📤 Disubmit', reviewed:'🔎 Direview', approved:'✅ Disetujui' };
+const WF_NEXT  = { draft:'submitted', submitted:'reviewed', reviewed:'approved' };
+const WF_BTN   = { draft:'Submit', submitted:'Tandai Direview', reviewed:'Approve' };
+const WF_COLOR = { draft:'#94A3B8', submitted:'#3B82F6', reviewed:'#F59E0B', approved:'#22C55E' };
+
+function renderWorkflowBar() {
+  const el = document.getElementById('workflow-bar');
+  if (!el) return;
+  if (!appState.cloudUrl) { el.innerHTML = ''; return; }
+  const badge = `<span style="display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;background:${WF_COLOR[appState.status]||'#94A3B8'}">${WF_LABEL[appState.status]||appState.status}</span>`;
+  const next = WF_NEXT[appState.status];
+  const btn = next ? `<button class="btn btn-secondary btn-sm" style="display:inline-block;width:auto;margin:0 0 0 8px;padding:0 12px;height:30px;font-size:12px" onclick="advanceWorkflow()">${WF_BTN[appState.status]} →</button>` : '';
+  el.innerHTML = `<div style="display:flex;align-items:center">${badge}${btn}</div>`;
+}
+async function advanceWorkflow() {
+  const next = WF_NEXT[appState.status];
+  if (!next) return;
+  let actorLabel = next === 'approved' ? 'Nama approver' : next === 'reviewed' ? 'Nama reviewer' : 'Nama pengirim';
+  const actor = prompt(actorLabel + ':', '');
+  if (actor === null) return;
+  appState.status = next;
+  if (!appState.docConfig) appState.docConfig = {};
+  appState.docConfig['_wf_'+next] = { actor: actor||'-', at: new Date().toISOString() };
+  await syncCloudNow();
+  renderWorkflowBar();
+  showToast('Status diperbarui: ' + WF_LABEL[next], 'success');
+}
+
 /* === RESULT PAGE === */
 function renderResult() {
+  renderWorkflowBar();
   const rows = appState.rows;
   const withFisik = rows.filter(r => r.stokFisik !== null);
   const matchC = withFisik.filter(r => r.stokFisik === r.stokSistem).length;
@@ -882,6 +1452,14 @@ function renderResult() {
     <div class="sto-stat over"> <div class="val">${overC}</div> <div class="lbl">OVER (+)</div></div>
     <div class="sto-stat short"><div class="val">${shortC}</div><div class="lbl">SHORT (−)</div></div>`;
 
+  const totW = withFisik.length || 1;
+  document.getElementById('sto-bar').innerHTML = `
+    <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin:0 0 12px;background:var(--row-even)">
+      <div style="width:${matchC/totW*100}%;background:#2e7d32"></div>
+      <div style="width:${overC/totW*100}%;background:#1565c0"></div>
+      <div style="width:${shortC/totW*100}%;background:#c62828"></div>
+    </div>`;
+
   document.getElementById('summary-bar').innerHTML = `
     <span class="badge badge-blue">Total: ${rows.length}</span>
     <span class="badge badge-green">Diisi: ${withFisik.length}</span>
@@ -891,6 +1469,42 @@ function renderResult() {
     ? `<div class="alert alert-warn">⚠ ${shortC} item SHORT — stok fisik kurang dari sistem.</div>`
     : `<div class="alert alert-ok">✓ Tidak ada item SHORT. ${matchC} MATCH, ${overC} OVER.</div>`;
 
+  document.getElementById('recount-banner').innerHTML = (shortC+overC) > 0
+    ? `<button class="btn btn-ghost" onclick="recountDiscrepancy()" style="margin-bottom:10px">🔁 Hitung Ulang ${shortC+overC} Item SHORT/OVER</button>`
+    : '';
+
+  const locs = [...new Set(rows.map(r=>r.lokasi).filter(Boolean))].sort();
+  const exBox = document.getElementById('lokasi-export-box');
+  if (locs.length) {
+    exBox.style.display = 'block';
+    document.getElementById('lokasi-export-select').innerHTML = locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+  } else { exBox.style.display = 'none'; }
+
+  // Ringkasan agregat per Material Code (gabung semua batch & lokasi)
+  const grp = {};
+  rows.forEach(r => {
+    const k = r.materialCode || r.materialName;
+    if (!grp[k]) grp[k] = { name:r.materialName, spec:r.spesifikasi||'', sistem:0, fisik:0, ada:false, lines:0 };
+    grp[k].sistem += isNaN(r.stokSistem)?0:r.stokSistem;
+    if (r.stokFisik !== null) { grp[k].fisik += r.stokFisik; grp[k].ada = true; }
+    grp[k].lines++;
+  });
+  document.getElementById('material-summary-body').innerHTML = Object.entries(grp).map(([code,g]) => {
+    const sel = g.ada ? g.fisik - g.sistem : null;
+    const status = !g.ada ? 'N/A' : sel===0 ? 'MATCH' : sel>0 ? 'OVER' : 'SHORT';
+    const chipC  = {MATCH:'chip-match',OVER:'chip-over',SHORT:'chip-short','N/A':'chip-na'}[status];
+    const selC   = sel===null?'':sel>0?'pos':sel<0?'neg':'zero';
+    return `<tr>
+      <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--tx)">${esc(code)}</span>${g.lines>1?` <span style="font-size:9px;color:var(--tx3)">(${g.lines} baris)</span>`:''}</td>
+      <td style="font-size:10.5px;color:var(--tx3)">${esc(g.name)}</td>
+      <td style="font-size:11px;font-weight:600;color:var(--tx2)">${esc(g.spec||'—')}</td>
+      <td class="num">${g.sistem.toLocaleString('id-ID')}</td>
+      <td class="num">${g.ada?g.fisik.toLocaleString('id-ID'):'<span style="color:var(--tx3)">—</span>'}</td>
+      <td class="num ${selC}">${sel===null?'—':(sel>0?'+':'')+sel.toLocaleString('id-ID')}</td>
+      <td style="text-align:center"><span class="chip ${chipC}">${status}</span></td>
+    </tr>`;
+  }).join('');
+
   document.getElementById('result-body').innerHTML = rows.map((r,i) => {
     const isDone = r.stokFisik !== null;
     const sel = isDone ? (r.stokFisik - r.stokSistem) : null;
@@ -899,9 +1513,11 @@ function renderResult() {
     const selC   = sel === null ? '' : sel > 0 ? 'pos' : sel < 0 ? 'neg' : 'zero';
     return `<tr>
       <td style="color:var(--tx3);font-size:11px">${i+1}</td>
-      <td><span class="mono" style="font-size:11px">${esc(r.materialCode)}</span></td>
-      <td style="font-size:12px">${esc(r.materialName)}</td>
+      <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--tx)">${esc(r.materialCode)}</span></td>
+      <td style="font-size:11px;font-weight:600;color:var(--tx2)">${esc(r.spesifikasi||'—')}</td>
+      <td style="font-size:10.5px;color:var(--tx3)">${esc(r.materialName)}</td>
       <td><span class="mono" style="font-size:10px">${esc(r.batch)}</span></td>
+      <td style="font-size:11px">${esc(r.lokasi||'—')}</td>
       <td style="font-size:11px">${esc(r.supplier||'—')}</td>
       <td class="num">${isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID')}${r._sistemEdited?'<span class="badge-edited" style="margin-left:4px;font-size:8px">E</span>':''}</td>
       <td class="num">${isDone ? r.stokFisik.toLocaleString('id-ID') : '<span style="color:var(--tx3)">—</span>'}</td>
@@ -925,9 +1541,14 @@ function openEditSistem(id) {
   document.getElementById('esm-unit-lama').textContent = row.unit || '';
   document.getElementById('esm-unit-new').textContent  = row.unit || '';
   document.getElementById('esm-batch').value = row.batch || '';
+  document.getElementById('esm-lokasi').value = row.lokasi || '';
   document.getElementById('esm-supplier').value = row.supplier || '';
   const inp = document.getElementById('esm-input');
   inp.value = isNaN(row.stokSistem) ? '' : row.stokSistem;
+  const logBox = document.getElementById('esm-log');
+  logBox.innerHTML = (row._log && row._log.length)
+    ? '📜 Riwayat: ' + row._log.slice(-3).map(esc).join(' · ')
+    : '';
   document.getElementById('modal-edit-sistem').classList.add('open');
   setTimeout(() => inp.select(), 120);
 }
@@ -945,9 +1566,18 @@ function saveEditSistem() {
   const val = parseFloat(document.getElementById('esm-input').value);
   if (isNaN(val) || val < 0) { showToast('Masukkan angka yang valid','error'); return; }
   const oldVal = row.stokSistem;
+  const newBatch = document.getElementById('esm-batch').value.trim();
+  const newLokasi = document.getElementById('esm-lokasi').value.trim();
+  const newSupplier = document.getElementById('esm-supplier').value.trim();
+  row._log = row._log || [];
+  const t = new Date().toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  if (val !== oldVal) row._log.push(`${t}: Stok Sistem ${oldVal}→${val}`);
+  if (newBatch !== row.batch) row._log.push(`${t}: Batch "${row.batch}"→"${newBatch}"`);
+  if (newLokasi !== row.lokasi) row._log.push(`${t}: Lokasi "${row.lokasi||'-'}"→"${newLokasi||'-'}"`);
   row.stokSistem    = val;
-  row.batch         = document.getElementById('esm-batch').value.trim();
-  row.supplier      = document.getElementById('esm-supplier').value.trim();
+  row.batch         = newBatch;
+  row.lokasi        = newLokasi;
+  row.supplier      = newSupplier;
   row._sistemEdited = true;
   row._sistemOri    = row._sistemOri ?? oldVal; // simpan nilai asli pertama kali
   document.getElementById('modal-edit-sistem').classList.remove('open');
@@ -959,8 +1589,128 @@ function saveEditSistem() {
 }
 
 /* === CONFIG === */
-function openConfig()  { loadConfig(); document.getElementById('config-modal').classList.add('open'); }
+function openConfig()  {
+  loadConfig();
+  document.getElementById('f-cloud-url').value = appState.cloudUrl || '';
+  document.getElementById('cloud-sid').textContent = appState.sessionId || '—';
+  document.getElementById('f-operator').value = appState.operator || '';
+  document.getElementById('f-area').value = appState.area || '';
+  document.getElementById('f-group').value = appState.groupId || '';
+  document.getElementById('config-modal').classList.add('open');
+}
 function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
+function saveCloudUrl() {
+  const url = document.getElementById('f-cloud-url').value.trim();
+  appState.cloudUrl = url;
+  localStorage.setItem('sto_cloud_url', url);
+  showToast(url ? 'URL Cloud Sync disimpan' : 'Cloud Sync dimatikan', 'success');
+  if (url && appState.rows.length) syncCloudNow();
+}
+async function manualRestoreCloud() {
+  const url = document.getElementById('f-cloud-url').value.trim();
+  if (url) { appState.cloudUrl = url; localStorage.setItem('sto_cloud_url', url); }
+  const sid = prompt('Masukkan ID Sesi yang ingin dipulihkan:', appState.sessionId || '');
+  if (!sid) return;
+  const data = await loadFromCloud(sid);
+  if (!data) return;
+  appState.rows = JSON.parse(data.dataJson || '[]');
+  appState.allRows = appState.rows;
+  appState.docConfig = data.docConfig || {};
+  appState.status = data.status || 'draft';
+  appState.sessionId = sid;
+  localStorage.setItem('sto_session_id', sid);
+  closeConfig();
+  loadConfig();
+  showPage('page-input'); setStep(3); renderInputPage();
+  showToast('Sesi berhasil dipulihkan dari cloud','success');
+}
+/* === AUTO-SAVE PROGRESS (anti hilang data jika HP mati/browser tertutup/device ganti) === */
+let _cloudTimer = null, _cloudBusy = false, _cloudFail = 0;
+function autoSaveProgress() {
+  try {
+    localStorage.setItem('sto_progress', JSON.stringify({
+      r: appState.rows, c: appState.docConfig || {}, t: Date.now(), sid: appState.sessionId
+    }));
+  } catch(e) {}
+  queueCloudSync();
+}
+function queueCloudSync() {
+  if (!appState.cloudUrl || !appState.rows.length) return;
+  clearTimeout(_cloudTimer);
+  _cloudTimer = setTimeout(syncCloudNow, 1500);
+}
+async function syncCloudNow() {
+  if (!appState.cloudUrl || _cloudBusy) return;
+  _cloudBusy = true;
+  try {
+    ensureSessionId();
+    const res = await fetch(appState.cloudUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'save', sessionId: appState.sessionId, sheetName: (getActiveAccount()||{}).sheetName||localStorage.getItem('sto_active_account')||'default', status: appState.status || 'draft',
+        docConfig: appState.docConfig, dataJson: JSON.stringify(appState.rows),
+        operator: appState.operator, groupId: appState.groupId, area: appState.area
+      })
+    });
+    const data = await res.json();
+    if (data.ok) { _cloudFail = 0; setCloudStatus('synced'); }
+    else { _cloudFail++; setCloudStatus('error'); }
+  } catch(e) {
+    _cloudFail++; setCloudStatus('error');
+    if (_cloudFail <= 1) showToast('Cloud sync gagal, data tetap aman di HP ini','error');
+  } finally { _cloudBusy = false; }
+}
+function setCloudStatus(s) {
+  const el = document.getElementById('cloud-status');
+  if (!el) return;
+  el.textContent = s === 'synced' ? '☁️ Tersimpan ke cloud' : s === 'error' ? '⚠️ Cloud offline (data lokal aman)' : '';
+  el.className = 'cloud-status ' + s;
+}
+async function loadFromCloud(sessionId) {
+  if (!appState.cloudUrl) { showToast('Isi URL Cloud Sync dulu di ⚙ Header','error'); return null; }
+  try {
+    const res = await fetch(appState.cloudUrl, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'load', sessionId, sheetName: (getActiveAccount()||{}).sheetName||localStorage.getItem('sto_active_account')||'default' })
+    });
+    const data = await res.json();
+    if (!data.ok) { showToast('Sesi cloud tidak ditemukan','error'); return null; }
+    return data;
+  } catch(e) { showToast('Gagal konek ke cloud: '+e.message,'error'); return null; }
+}
+function checkAutoSaveOnStart() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sto_progress')||'null');
+    if (!saved || !saved.r || !saved.r.length) return;
+    const done = saved.r.filter(r=>r.stokFisik!==null).length;
+    const tgl = new Date(saved.t).toLocaleString('id-ID');
+    if (confirm(`Ditemukan progres tersimpan (${done}/${saved.r.length} item, ${tgl}).\nLanjutkan progres ini?`)) {
+      appState.rows = saved.r; appState.allRows = saved.r; appState.docConfig = saved.c || {};
+      if (saved.sid) { appState.sessionId = saved.sid; localStorage.setItem('sto_session_id', saved.sid); }
+      loadConfig();
+      showPage('page-input'); setStep(3); renderInputPage();
+    } else {
+      localStorage.removeItem('sto_progress');
+    }
+  } catch(e) {}
+}
+window.addEventListener('load', () => {
+  renderAccountPage();
+  const acc = getActiveAccount();
+  if (acc) {
+    document.getElementById('active-account-label').textContent = acc.name;
+    document.getElementById('active-account-badge').textContent = 'Sheet: ' + (acc.sheetName||acc.id);
+    const bar = document.getElementById('acc-bar-el');
+    const dot = document.getElementById('acc-bar-dot');
+    if(bar) bar.style.borderLeftColor = acc.color||'var(--blue)';
+    if(dot) dot.style.background = acc.color||'var(--blue)';
+  }
+  if (!location.hash.includes('stoData=')) checkAutoSaveOnStart();
+});
+window.addEventListener('beforeunload', () => { if (appState.rows && appState.rows.length) autoSaveProgress(); });
+window.addEventListener('visibilitychange', () => { if (document.visibilityState==='hidden' && appState.rows && appState.rows.length) autoSaveProgress(); });
+
 function loadConfig() {
   const s = JSON.parse(localStorage.getItem('sto_cfg')||'{}');
   document.getElementById('f-company').value = s.company||'PT Rayard Deli Indonesia';
@@ -982,26 +1732,111 @@ function saveConfig() {
   showToast('Header disimpan','success');
 }
 
-/* === RESET === */
+/* === SEASON 4: MULTI-OPERATOR & DASHBOARD TREN === */
+function saveTeamInfo() {
+  appState.operator = document.getElementById('f-operator').value.trim();
+  appState.area = document.getElementById('f-area').value.trim();
+  let gid = document.getElementById('f-group').value.trim();
+  if (!gid) gid = 'GRP-' + Date.now().toString(36).slice(-6).toUpperCase();
+  appState.groupId = gid;
+  localStorage.setItem('sto_operator', appState.operator);
+  localStorage.setItem('sto_area', appState.area);
+  localStorage.setItem('sto_group_id', gid);
+  document.getElementById('f-group').value = gid;
+  showToast('Info tim disimpan. ID Grup: '+gid, 'success');
+  if (appState.cloudUrl && appState.rows.length) syncCloudNow();
+}
+function applyGroupFromHash() {
+  const m = location.hash.match(/group=([^&]+)/);
+  if (!m) return;
+  appState.groupId = decodeURIComponent(m[1]);
+  localStorage.setItem('sto_group_id', appState.groupId);
+  showToast('Bergabung ke grup STO: '+appState.groupId, 'success');
+}
+window.addEventListener('load', applyGroupFromHash);
+
+function openDashboard() {
+  document.getElementById('dash-gid').textContent = appState.groupId || '(belum diset — buka ⚙ Header)';
+  showPage('page-dashboard');
+  refreshDashboard();
+}
+async function refreshDashboard() {
+  if (!appState.cloudUrl) return showToast('Isi URL Cloud Sync dulu di ⚙ Header','error');
+  if (!appState.groupId) return showToast('Set ID Grup STO dulu di ⚙ Header','error');
+  document.getElementById('dash-sessions').innerHTML = 'Memuat…';
+  document.getElementById('dash-trend').innerHTML = 'Memuat…';
+  try {
+    const [rs, rt] = await Promise.all([
+      fetch(appState.cloudUrl, { method:'POST', body: JSON.stringify({ action:'listGroupSessions', groupId: appState.groupId }) }),
+      fetch(appState.cloudUrl, { method:'POST', body: JSON.stringify({ action:'getTrend', groupId: appState.groupId }) })
+    ]);
+    const ds = await rs.json(), dt = await rt.json();
+    renderDashSessions(ds.ok ? ds.sessions : []);
+    renderDashTrend(dt.ok ? dt.trend : []);
+  } catch(e) { showToast('Gagal memuat dashboard: '+e.message, 'error'); }
+}
+function renderDashSessions(sessions) {
+  const el = document.getElementById('dash-sessions');
+  if (!sessions.length) { el.innerHTML = '<p style="font-size:12px;color:var(--tx3)">Belum ada sesi pada grup ini.</p>'; return; }
+  el.innerHTML = sessions.map(s => {
+    const pct = s.stats.total ? Math.round((s.stats.total-s.stats.pending)/s.stats.total*100) : 0;
+    const badge = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;color:#fff;background:${WF_COLOR[s.status]||'#94A3B8'}">${WF_LABEL[s.status]||s.status}</span>`;
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--divider)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <b style="font-size:13px">${esc(s.operator||'(tanpa nama)')} ${s.area?'· '+esc(s.area):''}</b>${badge}
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:3px">
+        ${pct}% selesai (${s.stats.total-s.stats.pending}/${s.stats.total}) · ✅${s.stats.match} 🔼${s.stats.over} 🔽${s.stats.short}
+        · ${new Date(s.updatedAt).toLocaleString('id-ID')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderDashTrend(trend) {
+  const el = document.getElementById('dash-trend');
+  if (!trend.length) { el.innerHTML = '<p style="font-size:12px;color:var(--tx3)">Belum ada data tren.</p>'; return; }
+  const W = 320, H = 140, pad = 24, n = trend.length;
+  const maxV = Math.max(1, ...trend.map(t => t.over + t.short + t.match));
+  const stepX = n > 1 ? (W - pad*2) / (n - 1) : 0;
+  const bw = Math.min(28, (W - pad*2) / n * 0.6);
+  let bars = '', labels = '';
+  trend.forEach((t, i) => {
+    const x = pad + (n > 1 ? i*stepX : (W-pad*2)/2) - bw/2;
+    const hOver = (t.over / maxV) * (H - pad*2), hShort = (t.short / maxV) * (H - pad*2), hMatch = (t.match / maxV) * (H - pad*2);
+    let y = H - pad;
+    [['#22C55E', hMatch], ['#3B82F6', hOver], ['#EF4444', hShort]].forEach(([c, h]) => {
+      if (h > 0.5) { bars += `<rect x="${x}" y="${y-h}" width="${bw}" height="${h}" fill="${c}" rx="2"/>`; y -= h; }
+    });
+    if (n <= 8 || i % Math.ceil(n/8) === 0) labels += `<text x="${x+bw/2}" y="${H-6}" font-size="8" fill="#94A3B8" text-anchor="middle">${t.date.slice(5)}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${bars}${labels}
+    <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#E2E8F0"/></svg>
+    <div style="display:flex;gap:12px;font-size:10.5px;color:var(--tx3);margin-top:4px">
+      <span>🟢 Match</span><span>🔵 Over</span><span>🔴 Short</span>
+    </div>`;
+}
+
+
 function confirmReset() {
   if (confirm('Kembali ke upload? Semua input fisik akan hilang.')) {
     appState = { rows:[], docConfig:{}, filter:'all' };
+    localStorage.removeItem('sto_progress');
     setStep(1);
     showPage('page-upload');
   }
 }
 
 /* === PDF === */
-async function exportPdf() {
+async function exportPdf(lokasiFilter) {
   const cfg = appState.docConfig;
   if (!cfg.company) { openConfig(); showToast('Lengkapi header dokumen','info'); return; }
   const btn = document.getElementById('btn-export');
   btn.disabled = true; btn.textContent = 'Membuat PDF…';
   try {
     const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const rows = appState.rows;
-    const pageW=210, mX=14, hH=40;
+    const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const rows = lokasiFilter ? appState.rows.filter(r=>r.lokasi===lokasiFilter) : appState.rows;
+    const pageW=297, mX=10, hH=38;
     const dateStr = cfg.date ? new Date(cfg.date+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '—';
     const docno = cfg.docno||'—';
     const withFisik = rows.filter(r=>r.stokFisik!==null);
@@ -1014,12 +1849,17 @@ async function exportPdf() {
       const sel = isDone ? r.stokFisik - r.stokSistem : null;
       const status = isDone ? (sel===0?'MATCH':sel>0?'OVER':'SHORT') : 'N/A';
       return [
-        i+1, r.materialCode, r.materialName, r.batch,
+        i+1,
+        r.materialCode,
+        r.spesifikasi||'—',
+        r.materialName,
+        r.batch||'—',
         r.supplier||'—',
-        isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID') + (r._sistemEdited ? ' *' : ''),
+        isNaN(r.stokSistem)?'—':r.stokSistem.toLocaleString('id-ID') + (r._sistemEdited?' *':''),
         isDone?r.stokFisik.toLocaleString('id-ID'):'—',
         sel===null?'—':(sel>0?'+':'')+sel.toLocaleString('id-ID'),
-        status, r.unit
+        status,
+        r.unit
       ];
     });
 
@@ -1030,25 +1870,50 @@ async function exportPdf() {
     });
 
     doc.autoTable({
-      head:[['No','Mat.Code','Material Name','Batch','Supplier','Stok Sistem','Stok Fisik','Selisih','Status','Unit']],
+      head:[['No','Mat. Code','Spesifikasi','Material Name','Batch','Supplier','Stok\nSistem','Stok\nFisik','Selisih','Status','Unit']],
       body: tBody,
-      startY: hH+8,
+      startY: hH+6,
       margin:{left:mX,right:mX},
-      styles:{fontSize:8,cellPadding:2.2,textColor:[26,35,50],font:'helvetica'},
-      headStyles:{fillColor:[26,35,50],textColor:255,fontSize:8,fontStyle:'bold'},
-      alternateRowStyles:{fillColor:[248,249,251]},
+      tableWidth: 277,
+      theme: 'grid',
+      styles:{
+        fontSize:7,
+        cellPadding:{top:2,bottom:2,left:2.5,right:2.5},
+        textColor:[26,35,50],
+        font:'helvetica',
+        overflow:'ellipsize',
+        minCellHeight:7,
+        valign:'middle',
+        lineColor:[180,188,200],
+        lineWidth:0.2
+      },
+      headStyles:{
+        fillColor:[26,35,50],
+        textColor:255,
+        fontSize:7,
+        fontStyle:'bold',
+        halign:'center',
+        valign:'middle',
+        lineColor:[26,35,50],
+        lineWidth:0.3,
+        minCellHeight:9
+      },
+      alternateRowStyles:{fillColor:[246,248,252]},
       columnStyles:{
-        0:{cellWidth:7,halign:'center'},
-        1:{cellWidth:20,font:'courier',fontSize:7},
-        4:{cellWidth:22},
-        5:{cellWidth:16,halign:'right'},
-        6:{cellWidth:16,halign:'right'},
-        7:{cellWidth:14,halign:'right',fontStyle:'bold'},
-        8:{cellWidth:13,halign:'center',fontStyle:'bold'},
-        9:{cellWidth:8}
+        0: {cellWidth:8,  halign:'center', fontStyle:'bold'},
+        1: {cellWidth:32, font:'courier',  fontSize:6.5, fontStyle:'bold', textColor:[10,20,60], overflow:'linebreak'},
+        2: {cellWidth:30, fontSize:7},
+        3: {cellWidth:38, fontSize:7,      textColor:[80,90,110]},
+        4: {cellWidth:16, fontSize:6.5,    textColor:[80,90,110], halign:'center'},
+        5: {cellWidth:32, fontSize:6.5},
+        6: {cellWidth:22, halign:'right'},
+        7: {cellWidth:22, halign:'right'},
+        8: {cellWidth:20, halign:'right',  fontStyle:'bold'},
+        9: {cellWidth:15, halign:'center', fontStyle:'bold'},
+        10:{cellWidth:10, halign:'center'}
       },
       didParseCell:(d)=>{
-        if(d.section==='body'&&(d.column.index===7||d.column.index===8)){
+        if(d.section==='body'&&(d.column.index===8||d.column.index===9)){
           d.cell.styles.textColor=statusColors[d.row.index];
         }
       },
@@ -1059,11 +1924,11 @@ async function exportPdf() {
         doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
         doc.text(cfg.company||'Nama Perusahaan',mX,12);
         doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(180,195,215);
-        doc.text('LAPORAN STOCK OPNAME — StokSync v4.0',mX,20);
+        doc.text('LAPORAN STOCK OPNAME — RDI-STO v1.6',mX,20);
         doc.setFontSize(8); doc.setTextColor(200,215,230);
         doc.text(`Tanggal STO : ${dateStr}`,mX,28);
         doc.text(`No. Dokumen : ${docno}`,mX+82,28);
-        doc.text(`Lokasi : ${cfg.loc||'—'}`,mX,35);
+        doc.text(`Lokasi : ${lokasiFilter || cfg.loc||'—'}`,mX,35);
         if(appState.samplingPct!==null){
           doc.setTextColor(255,200,100);
           doc.text(`Sampling ${appState.samplingPct}% (${rows.length} dari ${appState.allRows.length} item)`,pageW-mX,35,{align:'right'});
@@ -1080,29 +1945,29 @@ async function exportPdf() {
         // footer
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(130,140,155);
         doc.setDrawColor(209,216,224);
-        doc.line(mX,285,pageW-mX,285);
-        doc.text(`Halaman ${pg}`,mX,290);
-        doc.text(cfg.company||'',pageW-mX,290,{align:'right'});
+        doc.line(mX,198,pageW-mX,198);
+        doc.text(`Halaman ${pg}`,mX,203);
+        doc.text(cfg.company||'',pageW-mX,203,{align:'right'});
         const editedCount = rows.filter(r=>r._sistemEdited).length;
         if (editedCount > 0) {
           doc.setTextColor(230,81,0);
-          doc.text(`* ${editedCount} stok sistem diubah manual dalam sesi ini`,mX,294);
+          doc.text(`* ${editedCount} stok sistem diubah manual dalam sesi ini`,mX,207);
         }
         doc.setTextColor(130,140,155);
-        doc.text('Diperiksa: _____________________',mX,295);
-        doc.text('Disetujui: _____________________',pageW/2,295);
+        doc.text('Diperiksa: _____________________',mX,207);
+        doc.text('Disetujui: _____________________',pageW/2,207);
       }
     });
 
     const safe=(docno).replace(/[^a-zA-Z0-9_-]/g,'_');
     const tgl=(cfg.date||new Date().toISOString().split('T')[0]).replace(/-/g,'');
-    doc.save(`STO_${safe}_${tgl}.pdf`);
+    doc.save(`STO_${safe}${lokasiFilter?'_'+lokasiFilter.replace(/[^a-zA-Z0-9]+/g,'-'):''}_${tgl}.pdf`);
     showToast('PDF berhasil diunduh!','success');
   } catch(err) {
     showToast('Gagal buat PDF: '+err.message,'error');
   } finally {
     btn.disabled=false;
-    btn.innerHTML=`Export PDF A4`;
+    btn.innerHTML=`Export PDF Landscape`;
   }
 }
 
@@ -1111,13 +1976,14 @@ function downloadTemplate() {
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([
     REQUIRED_HEADERS,
-    ['MAT-001','Kayu Jati Grade A','100x200x4 cm','BTH-2026-01',50,'LBR','PT Kayu Nusantara'],
-    ['MAT-002','MDF Board','120x240x1.8 cm','BTH-2026-02',120,'LBR','CV Papan Jaya'],
-    ['MAT-003','Lem Putih Fox','1 kg/kaleng','BTH-2026-03',30,'PCS','PT Henkel Indonesia'],
+    ['MAT-001','Kayu Jati Grade A','100x200x4 cm','BTH-2026-01','Gudang A - Rak 1',50,'LBR','PT Kayu Nusantara'],
+    ['MAT-001','Kayu Jati Grade A','100x200x4 cm','BTH-2026-02','Gudang B - Rak 5',30,'LBR','PT Kayu Nusantara'],
+    ['MAT-002','MDF Board','120x240x1.8 cm','BTH-2026-02','Gudang A - Rak 3',120,'LBR','CV Papan Jaya'],
+    ['MAT-003','Lem Putih Fox','1 kg/kaleng','BTH-2026-03','Gudang A - Rak 8',30,'PCS','PT Henkel Indonesia'],
   ]);
-  ws['!cols']=[{wch:16},{wch:28},{wch:22},{wch:18},{wch:14},{wch:8},{wch:22}];
+  ws['!cols']=[{wch:16},{wch:28},{wch:22},{wch:18},{wch:20},{wch:14},{wch:8},{wch:22}];
   XLSX.utils.book_append_sheet(wb,ws,'STO Template');
-  XLSX.writeFile(wb,'Template_StokSync_v4.xlsx');
+  XLSX.writeFile(wb,'Template_STO-WH_v6.xlsx');
   showToast('Template diunduh','success');
 }
 
@@ -1156,50 +2022,57 @@ function calcUse() {
   closeCalc();
 }
 
-/* === KIRIM DATA KE HP LAIN (QR + LINK, tanpa server) === */
-function openShare() {
-  const payload = JSON.stringify({ r: appState.rows, c: appState.docConfig || {} });
-  const compressed = LZString.compressToEncodedURIComponent(payload);
-  const link = location.origin + location.pathname + '#stoData=' + compressed;
-  document.getElementById('share-link-input').value = link;
-  const qrBox = document.getElementById('share-qr');
-  if (link.length <= 1800) {
-    qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link)}" width="220" height="220" alt="QR">`;
+function mergeKey(r) { return (r.materialCode||'')+'|'+(r.batch||'')+'|'+(r.lokasi||''); }
+function loadParsedData(data, merge) {
+  if (!data.r || !data.r.length) return false;
+  if (merge && appState.allRows && appState.allRows.length) {
+    const map = {};
+    appState.allRows.forEach(r => map[mergeKey(r)] = r);
+    data.r.forEach(incoming => {
+      const k = mergeKey(incoming);
+      const existing = map[k];
+      if (!existing) { map[k] = incoming; return; }
+      // gabungkan: pakai stokFisik yang sudah terisi (incoming diprioritaskan jika ada nilai baru)
+      if (incoming.stokFisik !== null) existing.stokFisik = incoming.stokFisik;
+      if (incoming._sistemEdited) { existing.stokSistem = incoming.stokSistem; existing._sistemEdited = true; }
+    });
+    const merged = Object.values(map).map((r,i) => ({...r, _id:i}));
+    appState.rows = merged; appState.allRows = merged;
   } else {
-    qrBox.innerHTML = `<p style="font-size:11px;color:var(--warn)">Data terlalu besar untuk QR — gunakan link di bawah (kirim via WA/email).</p>`;
-  }
-  document.getElementById('modal-share').classList.add('open');
-}
-function closeShare() { document.getElementById('modal-share').classList.remove('open'); }
-function copyShareLink() {
-  const inp = document.getElementById('share-link-input');
-  inp.select(); inp.setSelectionRange(0,99999);
-  navigator.clipboard?.writeText(inp.value).then(()=>showToast('Link disalin','success'))
-    .catch(()=>document.execCommand('copy'));
-}
-function tryLoadFromHash() {
-  const h = location.hash;
-  const m = h.match(/stoData=([^&]+)/);
-  if (!m) return false;
-  try {
-    const json = LZString.decompressFromEncodedURIComponent(m[1]);
-    const data = JSON.parse(json);
-    if (!data.r || !data.r.length) return false;
     appState.rows = data.r;
     appState.allRows = data.r;
-    appState.docConfig = data.c || {};
-    document.getElementById('smp-total').textContent = data.r.length;
-    document.getElementById('smp-fix-input').max = data.r.length;
-    document.getElementById('smp-fix-input').value = Math.ceil(data.r.length * 0.3);
-    updateSamplingPreview();
-    showPage('page-sampling');
-    setStep(2);
-    showToast('Data berhasil dimuat dari link','success');
-    history.replaceState(null,'',location.pathname);
-    return true;
-  } catch(e) { return false; }
+    appState.sessionId = null; localStorage.removeItem('sto_session_id');
+    ensureSessionId();
+  }
+  appState.docConfig = data.c || appState.docConfig || {};
+  document.getElementById('smp-total').textContent = appState.allRows.length;
+  document.getElementById('smp-fix-input').max = appState.allRows.length;
+  document.getElementById('smp-fix-input').value = Math.ceil(appState.allRows.length * 0.3);
+  updateSamplingPreview();
+  showPage('page-sampling');
+  setStep(2);
+  return true;
 }
-window.addEventListener('load', tryLoadFromHash);
+
+function exportPdfPerLokasi() {
+  const v = document.getElementById('lokasi-export-select').value;
+  if (v) exportPdf(v);
+}
+
+function recountDiscrepancy() {
+  const targets = appState.rows.filter(r => r.stokFisik !== null && r.stokFisik !== r.stokSistem);
+  if (!targets.length) return;
+  if (!confirm(`Reset ${targets.length} item SHORT/OVER untuk dihitung ulang?`)) return;
+  const ids = new Set(targets.map(r=>r._id));
+  appState.rows.forEach(r => { if (ids.has(r._id)) r.stokFisik = null; });
+  appState.filter = 'pending';
+  showPage('page-input');
+  setStep(3);
+  renderInputPage();
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.ftab')[1]?.classList.add('active');
+  showToast(`${targets.length} item direset, silakan hitung ulang`,'info');
+}
 
 function showToast(msg,type='info') {
   const t=document.getElementById('toast');
@@ -1213,7 +2086,7 @@ loadConfig();
 
 /* === PWA === */
 (function(){
-  const manifest={name:'StokSync — RDI',short_name:'StokSync',
+  const manifest={name:'RDI-STO',short_name:'RDI-STO',
     start_url:'./',display:'standalone',
     background_color:'#1A2332',theme_color:'#1A2332',
     icons:[{src:`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231A2332'/><text y='340' x='256' text-anchor='middle' font-size='280' font-family='sans-serif'>📦</text></svg>`,sizes:'512x512',type:'image/svg+xml'}]};
