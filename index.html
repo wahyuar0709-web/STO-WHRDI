@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v2.3 — Warehouse Stock Taking</title>
+<title>RDI-STO v2.9 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RDI-STO">
-<link rel="manifest" id="pwa-manifest">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
 <script>
 /* XLSX library v0.18.5 - dibundel langsung (tidak lagi via CDN) supaya tidak gagal load walau koneksi lambat/CDN diblokir jaringan */
 /*! xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
@@ -712,7 +714,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         <div class="hdr-brandrow">
           <div class="hdr-brand-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg></div>
           <span class="hdr-brand-name" id="hdr-brand-name">RDI-STO</span>
-          <span class="hdr-sub-badge" id="hdr-sub-badge">v2.3</span>
+          <span class="hdr-sub-badge" id="hdr-sub-badge">v2.9</span>
           <button class="hdr-bell" onclick="toggleSettingsMenu()" title="Menu Cepat">
             <svg class="ic" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 12 6 8Z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
           </button>
@@ -963,23 +965,54 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         </div>
       </div>
 
-      <div class="smp-stats">
-        <div class="smp-stat">
-          <div class="smp-stat-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg></div>
-          <div class="smp-stat-label">Total Item</div>
-          <div class="smp-stat-value" id="smp-total">0</div>
-        </div>
-        <div class="smp-stat">
-          <div class="smp-stat-ic" style="background:var(--green-lt);color:var(--green)"><svg class="ic" viewBox="0 0 24 24"><path d="M8 12.5l2.7 2.7L16.5 9"/></svg></div>
-          <div class="smp-stat-label">Terisi</div>
-          <div class="smp-stat-value" id="smp-filled">0</div>
+      <div id="sampling-resume-banner"></div>
+
+      <div id="sampling-start-card" class="list-card" style="margin-bottom:16px">
+        <div style="padding:16px">
+          <div style="font-weight:700;color:var(--tx);margin-bottom:10px">Mode Sampling</div>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:13px;color:var(--tx)">
+            <input type="radio" name="sampling-mode" value="full" checked onchange="onSamplingModeChange()">
+            Semua Item (Full Count) per gudang
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:13px;color:var(--tx)">
+            <input type="radio" name="sampling-mode" value="random" onchange="onSamplingModeChange()">
+            Sample Acak sebagian
+          </label>
+          <div id="sampling-random-config" style="display:none;margin:6px 0 4px">
+            <label style="font-size:11px;color:var(--tx3);font-weight:700;text-transform:uppercase">Jumlah Sample (%)</label>
+            <input type="number" id="sampling-random-percent" value="20" min="1" max="100"
+              style="width:100%;padding:10px;border:1px solid var(--bdr);border-radius:10px;margin-top:6px;font-size:14px">
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="startSampling()">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Mulai STO
+          </button>
         </div>
       </div>
 
-      <div id="sampling-list"></div>
-      <button class="btn btn-primary" onclick="exportPdf()">
-        <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M14 3v5h5"/><path d="M8 12h8M8 15.5h8M8 12v6.5M12 12v6.5M16 12v6.5"/></svg>Export PDF
-      </button>
+      <div id="sampling-active-wrap" style="display:none">
+        <div class="smp-stats">
+          <div class="smp-stat">
+            <div class="smp-stat-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg></div>
+            <div class="smp-stat-label">Total Item</div>
+            <div class="smp-stat-value" id="smp-total">0</div>
+          </div>
+          <div class="smp-stat">
+            <div class="smp-stat-ic" style="background:var(--green-lt);color:var(--green)"><svg class="ic" viewBox="0 0 24 24"><path d="M8 12.5l2.7 2.7L16.5 9"/></svg></div>
+            <div class="smp-stat-label">Terisi</div>
+            <div class="smp-stat-value" id="smp-filled">0</div>
+          </div>
+        </div>
+
+        <div id="sampling-save-status" style="margin-bottom:10px"></div>
+        <div id="sampling-list"></div>
+
+        <button class="btn btn-primary" onclick="finishSampling()" style="margin-bottom:8px">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M8 12.5l2.7 2.7L16.5 9"/></svg>Selesai STO
+        </button>
+        <button class="btn" onclick="exportPdf()">
+          <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M14 3v5h5"/><path d="M8 12h8M8 15.5h8M8 12v6.5M12 12v6.5M16 12v6.5"/></svg>Export PDF
+        </button>
+      </div>
     </div>
   </main>
 
@@ -1065,7 +1098,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.9';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1117,6 +1150,7 @@ function showPage(pageId) {
   if (pageId === 'page-home') refreshHomeSummary();
   if (pageId === 'page-accounts') renderAccountsList();
   if (pageId === 'page-upload' || pageId === 'page-sampling') updateAccountBars();
+  if (pageId === 'page-sampling') enterSamplingPage();
   window.scrollTo(0, 0);
 }
 
@@ -1269,6 +1303,7 @@ function selectAccount(id) {
   if (!acc) return;
   appState.currentAccount = acc;
   persistCurrentAccount();
+  resetSamplingState();
   renderAccountsList();
   refreshHomeSummary();
   updateAccountBars();
@@ -1324,6 +1359,225 @@ function renderAccountsList() {
       </div>
     </div>`;
   }).join('');
+}
+
+
+// ====== SAMPLING STO ======
+let samplingSaveTimer = null;
+
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'sto-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+
+function resetSamplingState() {
+  appState.rows = [];
+  appState.sessionId = null;
+  localStorage.removeItem('sto_session_id');
+  document.getElementById('sampling-active-wrap').style.display = 'none';
+  document.getElementById('sampling-start-card').style.display = 'block';
+  document.getElementById('sampling-resume-banner').innerHTML = '';
+}
+
+function onSamplingModeChange() {
+  const mode = document.querySelector('input[name="sampling-mode"]:checked').value;
+  document.getElementById('sampling-random-config').style.display = mode === 'random' ? 'block' : 'none';
+}
+
+// Dipanggil tiap kali halaman Sampling STO dibuka: cek apakah ada sesi yang belum selesai untuk gudang aktif
+function enterSamplingPage() {
+  document.getElementById('sampling-resume-banner').innerHTML = '';
+  if (!appState.currentAccount) {
+    document.getElementById('sampling-start-card').style.display = 'none';
+    document.getElementById('sampling-active-wrap').style.display = 'none';
+    document.getElementById('sampling-resume-banner').innerHTML =
+      `<div class="settings-status" style="background:var(--blue-lt);color:var(--blue);margin-bottom:16px" onclick="showPage('page-accounts')">
+        ${SVG.info}<span>Pilih gudang terlebih dahulu untuk mulai STO</span>
+      </div>`;
+    return;
+  }
+  document.getElementById('sampling-start-card').style.display = 'block';
+  document.getElementById('sampling-active-wrap').style.display = 'none';
+
+  if (!appState.config.cloudSyncUrl) return;
+
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'listGroupSessions', groupId: appState.currentAccount.sheetName })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.ok) return;
+    const draft = (data.sessions || []).find(s => s.status === 'draft');
+    if (!draft) return;
+    document.getElementById('sampling-resume-banner').innerHTML = `
+      <div class="list-card" style="margin-bottom:16px;border-color:var(--blue)">
+        <div style="padding:14px 16px">
+          <div style="font-weight:700;color:var(--tx);margin-bottom:4px">Ada sesi STO belum selesai</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">
+            Progress: ${draft.stats.match + draft.stats.over + draft.stats.short}/${draft.stats.total} item · Terakhir: ${new Date(draft.updatedAt).toLocaleString('id-ID')}
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="resumeSampling('${draft.sessionId}')">Lanjutkan Sesi Ini</button>
+        </div>
+      </div>`;
+  })
+  .catch(() => {});
+}
+
+function startSampling() {
+  if (!appState.currentAccount) {
+    showToast('Pilih gudang terlebih dahulu', 'error');
+    showPage('page-accounts');
+    return;
+  }
+  if (!appState.config.cloudSyncUrl) {
+    showToast('Atur Cloud Sync URL di Pengaturan', 'error');
+    showPage('page-settings');
+    return;
+  }
+
+  const mode = document.querySelector('input[name="sampling-mode"]:checked').value;
+  const percent = Math.min(100, Math.max(1, Number(document.getElementById('sampling-random-percent').value) || 20));
+
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.innerHTML = `${SVG.loader}<span>Memuat data master...</span>`;
+
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getMaster', sheetName: appState.currentAccount.sheetName })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.ok) throw new Error(data.error || 'Gagal memuat master data');
+    let items = data.rows || [];
+    if (!items.length) {
+      showToast('Data master gudang ini masih kosong. Upload dulu di menu Upload.', 'error');
+      return;
+    }
+    if (mode === 'random') {
+      items = items.slice().sort(() => Math.random() - 0.5);
+      const n = Math.max(1, Math.round(items.length * percent / 100));
+      items = items.slice(0, n);
+    }
+    appState.rows = items.map(it => ({
+      ...it,
+      stokSistem: Number(it['Stok Inventory']) || 0,
+      stokFisik: ''
+    }));
+    appState.sessionId = uuid();
+    localStorage.setItem('sto_session_id', appState.sessionId);
+    document.getElementById('sampling-start-card').style.display = 'none';
+    document.getElementById('sampling-active-wrap').style.display = 'block';
+    renderSamplingList();
+    saveSamplingSession('draft', true);
+    showToast(`STO dimulai: ${appState.rows.length} item (${mode === 'random' ? 'sample ' + percent + '%' : 'full count'})`, 'success');
+  })
+  .catch(err => showToast(err.message, 'error'))
+  .finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = `<svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Mulai STO`;
+  });
+}
+
+function resumeSampling(sessionId) {
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'loadSession', sessionId: sessionId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.ok) { showToast(data.error || 'Gagal memuat sesi', 'error'); return; }
+    appState.rows = data.rows || [];
+    appState.sessionId = sessionId;
+    localStorage.setItem('sto_session_id', sessionId);
+    document.getElementById('sampling-start-card').style.display = 'none';
+    document.getElementById('sampling-resume-banner').innerHTML = '';
+    document.getElementById('sampling-active-wrap').style.display = 'block';
+    renderSamplingList();
+    showToast('Sesi dilanjutkan', 'success');
+  })
+  .catch(err => showToast('Gagal memuat sesi: ' + err.message, 'error'));
+}
+
+function renderSamplingList() {
+  const el = document.getElementById('sampling-list');
+  const rows = appState.rows || [];
+  document.getElementById('smp-total').textContent = rows.length;
+  document.getElementById('smp-filled').textContent = rows.filter(r => r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null).length;
+
+  el.innerHTML = rows.map((r, i) => {
+    const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
+    let deltaTag = '';
+    if (hasValue) {
+      const delta = Number(r.stokFisik) - Number(r.stokSistem);
+      const color = delta === 0 ? 'var(--green)' : (delta > 0 ? 'var(--blue)' : '#DC2626');
+      const label = delta === 0 ? 'Sesuai' : (delta > 0 ? 'Lebih ' + delta : 'Kurang ' + Math.abs(delta));
+      deltaTag = `<span style="font-size:11px;font-weight:700;color:${color}">${label}</span>`;
+    }
+    return `
+    <div class="list-card" style="margin-bottom:10px">
+      <div style="padding:12px 16px">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <div style="font-weight:700;font-size:13px;color:var(--tx)">${r['Material Name'] || r['Material Code'] || 'Item ' + (i + 1)}</div>
+          ${deltaTag}
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''} · ${r['Lokasi'] || '-'}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <div style="font-size:12px;color:var(--tx3)">Stok Sistem: <b style="color:var(--tx)">${r.stokSistem}</b> ${r['Unit'] || ''}</div>
+        </div>
+        <input type="number" placeholder="Input stok fisik..." value="${hasValue ? r.stokFisik : ''}"
+          oninput="updateStokFisik(${i}, this.value)"
+          style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--bdr);border-radius:10px;font-size:14px">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateStokFisik(idx, value) {
+  appState.rows[idx].stokFisik = value === '' ? '' : Number(value);
+  document.getElementById('smp-filled').textContent =
+    appState.rows.filter(r => r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null).length;
+
+  clearTimeout(samplingSaveTimer);
+  samplingSaveTimer = setTimeout(() => saveSamplingSession('draft', false), 1000);
+}
+
+function saveSamplingSession(status, silent) {
+  if (!appState.sessionId || !appState.currentAccount || !appState.config.cloudSyncUrl) return;
+  const statusEl = document.getElementById('sampling-save-status');
+  if (!silent && statusEl) statusEl.innerHTML = `<div class="settings-status" style="background:var(--blue-lt);color:var(--blue)">${SVG.loader}<span>Menyimpan progres...</span></div>`;
+
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'saveSession',
+      sessionId: appState.sessionId,
+      sheetName: appState.currentAccount.sheetName,
+      groupId: appState.currentAccount.sheetName,
+      status: status,
+      dataJson: JSON.stringify(appState.rows),
+      operator: localStorage.getItem('sto_username') || '',
+      samplingType: document.querySelector('input[name="sampling-mode"]:checked')?.value || 'manual'
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (statusEl) {
+      if (data.ok) statusEl.innerHTML = `<div class="settings-status success" style="font-size:11px">${SVG.check}<span>Tersimpan ${new Date().toLocaleTimeString('id-ID')}</span></div>`;
+      else statusEl.innerHTML = `<div class="settings-status error">${SVG.error}<span>Gagal simpan: ${data.error}</span></div>`;
+    }
+  })
+  .catch(() => {
+    if (statusEl) statusEl.innerHTML = `<div class="settings-status error">${SVG.error}<span>Gagal simpan (offline?)</span></div>`;
+  });
+}
+
+function finishSampling() {
+  if (!confirm('Tandai sesi STO ini selesai? Data tetap bisa di-export PDF setelahnya.')) return;
+  saveSamplingSession('final', false);
+  showToast('STO ditandai selesai', 'success');
+  localStorage.removeItem('sto_session_id');
 }
 
 function updateAccountBars() {
@@ -1691,24 +1945,14 @@ function loadConfig() {
 loadConfig();
 showPage('page-home');
 
-// PWA Manifest
-(function() {
-  const manifest = {
-    name: `${APP_NAME} v${APP_VERSION}`,
-    short_name: APP_NAME,
-    start_url: './',
-    display: 'standalone',
-    background_color: '#073E78',
-    theme_color: '#073E78',
-    icons: [{
-      src: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%23073E78'/><path d='M110 190 256 110 402 190 256 270 110 190Z' fill='none' stroke='%23ffffff' stroke-width='16' stroke-linejoin='round'/><path d='M110 190v170l146 80 146-80V190' fill='none' stroke='%23ffffff' stroke-width='16' stroke-linejoin='round'/><path d='M256 270v170' stroke='%23ffffff' stroke-width='16'/></svg>`,
-      sizes: '512x512',
-      type: 'image/svg+xml'
-    }]
-  };
-  const mBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-  document.getElementById('pwa-manifest').href = URL.createObjectURL(mBlob);
-})();
+// Registrasi Service Worker - wajib untuk PWA installable penuh (bukan cuma Add to Home Screen)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
