@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v2.9 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.0 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -687,7 +687,15 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 .acc-tile-status span{font-size:10.5px;color:var(--tx3);overflow-wrap:anywhere}
 
 /* ===== SAMPLING STATS ===== */
-.smp-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.smp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.smp-stat.ira-good .smp-stat-value{color:var(--green)}
+.smp-stat.ira-warn .smp-stat-value{color:#B45309}
+.smp-stat.ira-bad .smp-stat-value{color:#DC2626}
+.recount-badge{display:inline-flex;align-items:center;gap:4px;background:#FEF2F2;color:#DC2626;
+  font-size:10px;font-weight:800;padding:3px 7px;border-radius:20px;margin-top:6px}
+.calc-btn{width:40px;height:40px;flex-shrink:0;border-radius:10px;border:1px solid var(--bdr);
+  background:var(--blue-lt);color:var(--blue);display:flex;align-items:center;justify-content:center}
+.calc-btn:active{background:#DCEBFB}
 .smp-stat{background:var(--card);border-radius:var(--r-lg);padding:16px 14px;border:1px solid var(--bdr);
   text-align:center;box-shadow:var(--sh)}
 .smp-stat-ic{width:32px;height:32px;border-radius:9px;background:var(--blue-lt);color:var(--blue);
@@ -865,6 +873,11 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
           <label class="settings-label">Nama Pengguna</label>
           <input type="text" id="config-username" class="settings-input" placeholder="Nama Anda" value="">
         </div>
+        <div class="settings-field">
+          <label class="settings-label">Toleransi Selisih STO (%)</label>
+          <input type="number" id="config-tolerance" class="settings-input" placeholder="2" min="0" max="100" step="0.1" value="2">
+          <span class="settings-hint">Standar cycle counting manufaktur: selisih di bawah toleransi ini dianggap wajar (rounding/measurement error). Di atasnya wajib hitung ulang (recount) sebelum sesi ditutup. Default 2%.</span>
+        </div>
         <button class="btn btn-primary btn-sm" onclick="saveGeneralSettings()">
           <svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5Z"/><path d="M8 4v5h7V4"/><path d="M8 14h8v6H8Z"/></svg>Simpan Pengaturan
         </button>
@@ -1001,6 +1014,11 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
             <div class="smp-stat-label">Terisi</div>
             <div class="smp-stat-value" id="smp-filled">0</div>
           </div>
+          <div class="smp-stat" id="smp-ira-card">
+            <div class="smp-stat-ic" style="background:#FEF3C7;color:#B45309"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 10v4"/><circle cx="12" cy="16.7" r="0.6" fill="currentColor" stroke="none"/></svg></div>
+            <div class="smp-stat-label">IRA / Perlu Ulang</div>
+            <div class="smp-stat-value" id="smp-ira" style="font-size:16px">100% / 0</div>
+          </div>
         </div>
 
         <div id="sampling-save-status" style="margin-bottom:10px"></div>
@@ -1092,13 +1110,78 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
   </div>
 </div>
 
+<!-- MODAL: KALKULATOR STOK ITEM -->
+<div id="modal-calc" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="calc-item-name">Kalkulator Stok</h2>
+      <button class="modal-close" onclick="closeCalcModal()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Mode 1: Kalkulator Kemasan (standar hitung stok gudang: dus/karton x isi + eceran) -->
+      <div style="background:var(--blue-lt);border-radius:var(--r-md);padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:800;color:var(--blue-dk);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Hitung per Kemasan</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="calc-pack-qty" placeholder="Isi/kemasan" min="0" oninput="updatePackCalc()"
+            style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--bdr);border-radius:9px;font-size:13px;background:#fff">
+          <span style="font-weight:700;color:var(--tx3)">×</span>
+          <input type="number" id="calc-pack-count" placeholder="Jml kemasan" min="0" oninput="updatePackCalc()"
+            style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--bdr);border-radius:9px;font-size:13px;background:#fff">
+          <span style="font-weight:700;color:var(--tx3)">+</span>
+          <input type="number" id="calc-pack-extra" placeholder="Eceran" min="0" oninput="updatePackCalc()"
+            style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--bdr);border-radius:9px;font-size:13px;background:#fff">
+        </div>
+        <div style="text-align:right;margin-top:8px;font-size:12px;color:var(--blue-dk)">
+          Total: <b id="calc-pack-total" style="font-size:15px">0</b>
+        </div>
+      </div>
+
+      <!-- Mode 2: Kalkulator bebas (tambah/kurang/kali/bagi) -->
+      <div style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Kalkulator Bebas</div>
+      <div id="calc-display" style="background:var(--tx);color:#fff;border-radius:var(--r-md);padding:16px 14px;
+        text-align:right;font-size:26px;font-weight:700;margin-bottom:10px;overflow-x:auto;white-space:nowrap;font-family:var(--fm)">0</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <button type="button" class="btn btn-secondary" onclick="calcClear()">C</button>
+        <button type="button" class="btn btn-secondary" onclick="calcBackspace()">⌫</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('%')">%</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('÷')">÷</button>
+
+        <button type="button" class="btn btn-secondary" onclick="calcInput('7')">7</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('8')">8</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('9')">9</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('×')">×</button>
+
+        <button type="button" class="btn btn-secondary" onclick="calcInput('4')">4</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('5')">5</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('6')">6</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('-')">−</button>
+
+        <button type="button" class="btn btn-secondary" onclick="calcInput('1')">1</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('2')">2</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('3')">3</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('+')">+</button>
+
+        <button type="button" class="btn btn-secondary" onclick="calcInput('0')" style="grid-column:span 2">0</button>
+        <button type="button" class="btn btn-secondary" onclick="calcInput('.')">.</button>
+        <button type="button" class="btn btn-primary" onclick="calcEquals()">=</button>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="applyCalcResult()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M8 12.5l2.7 2.7L16.5 9"/></svg>Gunakan Hasil ke Stok Fisik
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
 
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '2.9';
+const APP_VERSION = '3.0';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1134,6 +1217,7 @@ const appState = {
     cloudSyncUrl: localStorage.getItem('sto_cloud_sync_url') || '',
     company: localStorage.getItem('sto_company') || '',
     username: localStorage.getItem('sto_username') || '',
+    tolerancePercent: Number(localStorage.getItem('sto_tolerance_percent')) || 2,
   },
   accounts: JSON.parse(localStorage.getItem('sto_accounts') || '[]'),
   currentAccount: JSON.parse(localStorage.getItem('sto_current_account') || 'null'),
@@ -1500,44 +1584,131 @@ function resumeSampling(sessionId) {
   .catch(err => showToast('Gagal memuat sesi: ' + err.message, 'error'));
 }
 
+// ====== STANDAR PERHITUNGAN STO MANUFAKTUR (cycle counting) ======
+// Referensi: praktik umum APICS/ASCM & tolerance-based cycle count pada WMS profesional
+// (mis. SAP tolerance group, Oracle cycle count tolerance%).
+// Klasifikasi:
+//  match         : fisik = sistem, tidak ada selisih
+//  minor         : selisih% <= toleransi -> wajar (rounding/human error kecil), tidak wajib recount
+//  major         : selisih% > toleransi  -> WAJIB hitung ulang (recount) sebelum sesi ditutup
+//  unrecorded    : sistem = 0, fisik > 0 -> stok tidak tercatat di sistem, perlu investigasi
+//  criticalShort : sistem > 0, fisik = 0 -> kehilangan stok total, prioritas investigasi tertinggi
+function classifyVariance(fisik, sistem) {
+  const tol = appState.config.tolerancePercent || 2;
+  const selisih = fisik - sistem;
+  if (sistem === 0 && fisik > 0) return { selisih, variancePercent: null, status: 'unrecorded', needRecount: true };
+  if (sistem > 0 && fisik === 0) return { selisih, variancePercent: -100, status: 'criticalShort', needRecount: true };
+  if (selisih === 0) return { selisih: 0, variancePercent: 0, status: 'match', needRecount: false };
+  const variancePercent = sistem !== 0 ? (Math.abs(selisih) / sistem) * 100 : 0;
+  const needRecount = variancePercent > tol;
+  return { selisih, variancePercent, status: needRecount ? 'major' : 'minor', needRecount };
+}
+
+const VARIANCE_META = {
+  match:         { label: 'Sesuai',                color: 'var(--green)' },
+  minor:         { label: 'Dalam Toleransi',        color: 'var(--blue)' },
+  major:         { label: 'Perlu Hitung Ulang',      color: '#DC2626' },
+  unrecorded:    { label: 'Stok Tak Tercatat',       color: '#B45309' },
+  criticalShort: { label: 'Stok Hilang Total',       color: '#DC2626' }
+};
+
+function computeIRA(rows) {
+  let counted = 0, accurate = 0, needRecount = 0;
+  rows.forEach(r => {
+    if (r.stokFisik === '' || r.stokFisik === undefined || r.stokFisik === null) return;
+    counted++;
+    const c = classifyVariance(Number(r.stokFisik), Number(r.stokSistem));
+    if (c.status === 'match' || c.status === 'minor') accurate++;
+    if (c.needRecount) needRecount++;
+  });
+  const ira = counted > 0 ? Math.round((accurate / counted) * 1000) / 10 : 100;
+  return { ira, needRecount, counted };
+}
+
 function renderSamplingList() {
   const el = document.getElementById('sampling-list');
   const rows = appState.rows || [];
   document.getElementById('smp-total').textContent = rows.length;
   document.getElementById('smp-filled').textContent = rows.filter(r => r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null).length;
 
+  const { ira, needRecount } = computeIRA(rows);
+  const iraEl = document.getElementById('smp-ira');
+  const iraCard = document.getElementById('smp-ira-card');
+  if (iraEl) iraEl.textContent = `${ira}% / ${needRecount}`;
+  if (iraCard) {
+    iraCard.classList.remove('ira-good', 'ira-warn', 'ira-bad');
+    iraCard.classList.add(ira >= 98 ? 'ira-good' : (ira >= 90 ? 'ira-warn' : 'ira-bad'));
+  }
+
   el.innerHTML = rows.map((r, i) => {
     const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
-    let deltaTag = '';
+    let deltaTag = '', recountBadge = '';
     if (hasValue) {
-      const delta = Number(r.stokFisik) - Number(r.stokSistem);
-      const color = delta === 0 ? 'var(--green)' : (delta > 0 ? 'var(--blue)' : '#DC2626');
-      const label = delta === 0 ? 'Sesuai' : (delta > 0 ? 'Lebih ' + delta : 'Kurang ' + Math.abs(delta));
-      deltaTag = `<span style="font-size:11px;font-weight:700;color:${color}">${label}</span>`;
+      const c = classifyVariance(Number(r.stokFisik), Number(r.stokSistem));
+      const meta = VARIANCE_META[c.status];
+      const pctTx = c.variancePercent === null ? '' : ` (${c.variancePercent > 0 ? (c.selisih > 0 ? '+' : '') + c.selisih : c.selisih}${c.status !== 'match' && c.variancePercent !== -100 ? ', ' + c.variancePercent.toFixed(1) + '%' : ''})`;
+      deltaTag = `<span style="font-size:11px;font-weight:700;color:${meta.color}">${meta.label}${pctTx}</span>`;
+      if (c.needRecount) recountBadge = `<div class="recount-badge">${SVG.warn} Wajib Hitung Ulang</div>`;
     }
     return `
-    <div class="list-card" style="margin-bottom:10px">
+    <div class="list-card" style="margin-bottom:10px" id="smp-card-${i}">
       <div style="padding:12px 16px">
         <div style="display:flex;justify-content:space-between;gap:8px">
           <div style="font-weight:700;font-size:13px;color:var(--tx)">${r['Material Name'] || r['Material Code'] || 'Item ' + (i + 1)}</div>
-          ${deltaTag}
+          <span id="smp-delta-${i}">${deltaTag}</span>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''} · ${r['Lokasi'] || '-'}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
           <div style="font-size:12px;color:var(--tx3)">Stok Sistem: <b style="color:var(--tx)">${r.stokSistem}</b> ${r['Unit'] || ''}</div>
         </div>
-        <input type="number" placeholder="Input stok fisik..." value="${hasValue ? r.stokFisik : ''}"
-          oninput="updateStokFisik(${i}, this.value)"
-          style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--bdr);border-radius:10px;font-size:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <input type="number" id="smp-input-${i}" placeholder="Input stok fisik..." value="${hasValue ? r.stokFisik : ''}"
+            oninput="updateStokFisik(${i}, this.value)"
+            style="flex:1;min-width:0;padding:10px;border:1px solid var(--bdr);border-radius:10px;font-size:14px">
+          <button type="button" class="calc-btn" onclick="openCalcModal(${i})" title="Kalkulator hitung stok">
+            <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3"/></svg>
+          </button>
+        </div>
+        <span id="smp-recount-${i}">${recountBadge}</span>
       </div>
     </div>`;
   }).join('');
+}
+
+// Update badge + IRA stat untuk satu item tanpa render ulang seluruh list (jaga fokus input)
+function refreshItemBadge(idx) {
+  const r = appState.rows[idx];
+  if (!r) return;
+  const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
+  const deltaEl = document.getElementById(`smp-delta-${idx}`);
+  const recountEl = document.getElementById(`smp-recount-${idx}`);
+  if (!hasValue) {
+    if (deltaEl) deltaEl.innerHTML = '';
+    if (recountEl) recountEl.innerHTML = '';
+  } else {
+    const c = classifyVariance(Number(r.stokFisik), Number(r.stokSistem));
+    const meta = VARIANCE_META[c.status];
+    const pctTx = c.variancePercent === null ? '' : ` (${c.selisih > 0 ? '+' + c.selisih : c.selisih}${c.status !== 'match' && c.variancePercent !== -100 ? ', ' + c.variancePercent.toFixed(1) + '%' : ''})`;
+    if (deltaEl) deltaEl.innerHTML = `<span style="font-size:11px;font-weight:700;color:${meta.color}">${meta.label}${pctTx}</span>`;
+    if (recountEl) recountEl.innerHTML = c.needRecount ? `<div class="recount-badge">${SVG.warn} Wajib Hitung Ulang</div>` : '';
+  }
+
+  const rows = appState.rows || [];
+  const { ira, needRecount } = computeIRA(rows);
+  const iraEl = document.getElementById('smp-ira');
+  const iraCard = document.getElementById('smp-ira-card');
+  if (iraEl) iraEl.textContent = `${ira}% / ${needRecount}`;
+  if (iraCard) {
+    iraCard.classList.remove('ira-good', 'ira-warn', 'ira-bad');
+    iraCard.classList.add(ira >= 98 ? 'ira-good' : (ira >= 90 ? 'ira-warn' : 'ira-bad'));
+  }
 }
 
 function updateStokFisik(idx, value) {
   appState.rows[idx].stokFisik = value === '' ? '' : Number(value);
   document.getElementById('smp-filled').textContent =
     appState.rows.filter(r => r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null).length;
+  refreshItemBadge(idx);
 
   clearTimeout(samplingSaveTimer);
   samplingSaveTimer = setTimeout(() => saveSamplingSession('draft', false), 1000);
@@ -1571,6 +1742,97 @@ function saveSamplingSession(status, silent) {
   .catch(() => {
     if (statusEl) statusEl.innerHTML = `<div class="settings-status error">${SVG.error}<span>Gagal simpan (offline?)</span></div>`;
   });
+}
+
+// ====== KALKULATOR STOK PER ITEM ======
+let calcExpr = '0';
+let calcCurrentIdx = null;
+
+function openCalcModal(idx) {
+  calcCurrentIdx = idx;
+  const r = appState.rows[idx];
+  document.getElementById('calc-item-name').textContent = r['Material Name'] || r['Material Code'] || 'Kalkulator Stok';
+  document.getElementById('calc-pack-qty').value = '';
+  document.getElementById('calc-pack-count').value = '';
+  document.getElementById('calc-pack-extra').value = '';
+  document.getElementById('calc-pack-total').textContent = '0';
+  const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
+  calcExpr = hasValue ? String(r.stokFisik) : '0';
+  document.getElementById('calc-display').textContent = calcExpr;
+  document.getElementById('modal-calc').classList.add('open');
+}
+
+function closeCalcModal() {
+  document.getElementById('modal-calc').classList.remove('open');
+}
+
+// Mode kemasan: Isi/Kemasan x Jumlah Kemasan + Eceran = Total (standar hitung fisik gudang)
+function updatePackCalc() {
+  const qty = Number(document.getElementById('calc-pack-qty').value) || 0;
+  const count = Number(document.getElementById('calc-pack-count').value) || 0;
+  const extra = Number(document.getElementById('calc-pack-extra').value) || 0;
+  const total = qty * count + extra;
+  document.getElementById('calc-pack-total').textContent = total;
+  calcExpr = String(total);
+  document.getElementById('calc-display').textContent = calcExpr;
+}
+
+function calcClear() {
+  calcExpr = '0';
+  document.getElementById('calc-display').textContent = calcExpr;
+}
+
+function calcBackspace() {
+  calcExpr = calcExpr.length > 1 ? calcExpr.slice(0, -1) : '0';
+  document.getElementById('calc-display').textContent = calcExpr;
+}
+
+function calcInput(val) {
+  const operators = ['+', '-', '×', '÷'];
+  if (val === '%') {
+    const match = calcExpr.match(/(\d+\.?\d*)$/);
+    if (match) {
+      const num = parseFloat(match[0]) / 100;
+      calcExpr = calcExpr.slice(0, match.index) + String(num);
+    }
+    document.getElementById('calc-display').textContent = calcExpr;
+    return;
+  }
+  if (calcExpr === '0' && val !== '.') {
+    calcExpr = operators.includes(val) ? '0' + val : val;
+  } else if (operators.includes(val) && operators.includes(calcExpr.slice(-1))) {
+    calcExpr = calcExpr.slice(0, -1) + val;
+  } else {
+    calcExpr += val;
+  }
+  document.getElementById('calc-display').textContent = calcExpr;
+}
+
+function calcEquals() {
+  try {
+    const sanitized = calcExpr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+    if (!/^[0-9+\-*/.() ]+$/.test(sanitized)) throw new Error('invalid');
+    const result = Function('"use strict";return (' + sanitized + ')')();
+    if (!isFinite(result)) throw new Error('invalid');
+    calcExpr = String(Math.round(result * 1000) / 1000);
+    document.getElementById('calc-display').textContent = calcExpr;
+  } catch (e) {
+    document.getElementById('calc-display').textContent = 'Error';
+    calcExpr = '0';
+    setTimeout(() => { const d = document.getElementById('calc-display'); if (d) d.textContent = '0'; }, 800);
+  }
+}
+
+function applyCalcResult() {
+  calcEquals();
+  const val = Number(calcExpr);
+  if (isNaN(val)) { showToast('Hasil kalkulator tidak valid', 'error'); return; }
+  const idx = calcCurrentIdx;
+  const inputEl = document.getElementById(`smp-input-${idx}`);
+  if (inputEl) inputEl.value = val;
+  updateStokFisik(idx, val);
+  closeCalcModal();
+  showToast(`Stok fisik diisi: ${val}`, 'success');
 }
 
 function finishSampling() {
@@ -1757,12 +2019,17 @@ function showError(elementId, msg, autoHideMs = 5000) {
 function saveGeneralSettings() {
   const company = document.getElementById('config-company').value;
   const username = document.getElementById('config-username').value;
+  let tolerance = Number(document.getElementById('config-tolerance').value);
+  if (isNaN(tolerance) || tolerance < 0) tolerance = 2;
   localStorage.setItem('sto_company', company);
   localStorage.setItem('sto_username', username);
+  localStorage.setItem('sto_tolerance_percent', String(tolerance));
   appState.config.company = company;
   appState.config.username = username;
+  appState.config.tolerancePercent = tolerance;
   showToast('Pengaturan berhasil disimpan', 'success');
   refreshHomeSummary();
+  if (appState.rows && appState.rows.length) renderSamplingList();
 }
 
 function downloadTemplate() {
@@ -1940,6 +2207,7 @@ function loadConfig() {
   document.getElementById('cloud-sync-url').value = appState.config.cloudSyncUrl;
   document.getElementById('config-company').value = appState.config.company;
   document.getElementById('config-username').value = appState.config.username;
+  document.getElementById('config-tolerance').value = appState.config.tolerancePercent;
 }
 
 loadConfig();
