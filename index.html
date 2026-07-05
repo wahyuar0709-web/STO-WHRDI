@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.1 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.2 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1181,7 +1181,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -2258,7 +2258,7 @@ function exportPdf() {
     { label: 'Sesuai', value: matchCount, color: [14, 159, 110] },
     { label: 'Toleransi', value: minorCount, color: [10, 93, 176] },
     { label: 'Perlu Ulang', value: majorCount, color: [220, 38, 38] },
-    { label: 'IRA (Akurasi)', value: ira + '%', color: ira >= 98 ? [14, 159, 110] : (ira >= 90 ? [180, 83, 9] : [220, 38, 38]) }
+    { label: 'IRA*', value: ira + '%', color: ira >= 98 ? [14, 159, 110] : (ira >= 90 ? [180, 83, 9] : [220, 38, 38]) }
   ];
   const boxW = usableW / kpis.length;
   kpis.forEach((k, i) => {
@@ -2280,20 +2280,29 @@ function exportPdf() {
   const cols = [
     { key: 'no', label: 'No', w: 8, align: 'center' },
     { key: 'kode', label: 'Kode', w: 18, align: 'left' },
-    { key: 'nama', label: 'Nama Material', w: 46, align: 'left' },
-    { key: 'lokasi', label: 'Lokasi', w: 18, align: 'left' },
-    { key: 'batch', label: 'Batch', w: 14, align: 'left' },
-    { key: 'unit', label: 'Satuan', w: 10, align: 'center' },
+    { key: 'nama', label: 'Nama Material', w: 50, align: 'left' },
+    { key: 'lokasi', label: 'Lokasi', w: 20, align: 'left' },
+    { key: 'batch', label: 'Batch', w: 16, align: 'left' },
+    { key: 'unit', label: 'Satuan', w: 12, align: 'center' },
     { key: 'sistem', label: 'Sistem', w: 12, align: 'right' },
     { key: 'fisik', label: 'Fisik', w: 12, align: 'right' },
     { key: 'selisih', label: 'Selisih', w: 12, align: 'right' },
-    { key: 'variancePercent', label: 'Var%', w: 12, align: 'right' },
+    { key: 'variancePercent', label: 'Var (%)*', w: 14, align: 'right' },
     { key: 'status', label: 'Status', w: 20, align: 'center' }
   ];
   const rowH = 7, headH = 8;
 
   function alignFor(a) { return a === 'right' ? 'right' : (a === 'center' ? 'center' : 'left'); }
   function xFor(cx, col) { return col.align === 'right' ? cx + col.w - 2 : (col.align === 'center' ? cx + col.w / 2 : cx + 2); }
+  // Potong teks otomatis sesuai lebar kolom aktual (pakai getTextWidth) supaya TIDAK PERNAH
+  // tumpang tindih dengan kolom sebelah, berapapun panjang datanya (kode/lokasi/batch/nama).
+  function fitText(text, maxW) {
+    text = String(text === undefined || text === null ? '' : text);
+    if (doc.getTextWidth(text) <= maxW) return text;
+    let t = text;
+    while (t.length > 1 && doc.getTextWidth(t + '..') > maxW) t = t.slice(0, -1);
+    return t + '..';
+  }
 
   function drawTableHeader(yy) {
     doc.setFillColor(10, 93, 176);
@@ -2338,15 +2347,49 @@ function exportPdf() {
         doc.setFont('helvetica', 'normal');
       }
       val = String(val === undefined || val === null ? '' : val);
-      if (col.key === 'nama' && val.length > 34) val = val.slice(0, 32) + '..';
+      if (['kode', 'nama', 'lokasi', 'batch'].includes(col.key)) val = fitText(val, col.w - 4);
       doc.text(val, xFor(cx, col), y + rowH / 2 + 1.2, { align: alignFor(col.align) });
       cx += col.w;
     });
     y += rowH;
   });
 
+  // ---- KETERANGAN ISTILAH (standar cycle counting manufaktur, awam-friendly) ----
+  y += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  const legendLines = [
+    'Var (%) = Varians: persentase selisih stok fisik terhadap stok sistem. Rumus: |Fisik - Sistem| / Sistem x 100%.',
+    `Toleransi = selisih masih dalam batas wajar (<= ${appState.config.tolerancePercent || 2}% dari stok sistem), dianggap wajar dan TIDAK wajib dihitung ulang.`,
+    `ULANG! = selisih melebihi batas toleransi (> ${appState.config.tolerancePercent || 2}%), WAJIB dihitung ulang sebelum sesi STO ditutup.`,
+    'Tak Tercatat / Hilang! = stok fisik ditemukan tapi tidak ada di sistem, atau sebaliknya stok sistem ada tapi fisik nol — perlu investigasi lebih lanjut.',
+    'IRA (Inventory Record Accuracy / Akurasi Catatan Stok) = KPI standar industri manufaktur untuk mengukur akurasi data stok. Rumus: (Item Sesuai + Item dalam Toleransi) / Item yang Sudah Dihitung x 100%. Target umum industri: >= 98%.'
+  ];
+  const wrapped = legendLines.map(line => doc.splitTextToSize('• ' + line, usableW - 8));
+  let legendH = 8;
+  wrapped.forEach(w => { legendH += w.length * 3.2; });
+  legendH += 4;
+
+  if (y + legendH > pageH - 40) { doc.addPage(); y = 16; }
+
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(230, 235, 242);
+  doc.roundedRect(marginX, y, usableW, legendH, 1.5, 1.5, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(15, 30, 51);
+  doc.text('Keterangan Istilah (Standar Cycle Counting Manufaktur)', marginX + 4, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  doc.setTextColor(90, 100, 120);
+  let legendY = y + 11;
+  wrapped.forEach(w => {
+    doc.text(w, marginX + 4, legendY);
+    legendY += w.length * 3.2;
+  });
+  y += legendH + 8;
+
   // ---- SIGN-OFF (standar STO manufaktur: dihitung/diperiksa/disetujui) ----
-  y += 14;
   if (y > pageH - 42) { doc.addPage(); y = 20; }
   const signW = usableW / 3;
   ['Dihitung oleh', 'Diperiksa oleh', 'Disetujui oleh'].forEach((label, i) => {
