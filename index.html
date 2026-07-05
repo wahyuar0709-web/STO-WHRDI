@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.0 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.1 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1181,7 +1181,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -2145,7 +2145,7 @@ function confirmAndUploadExcel() {
   });
 }
 
-// ====== EXPORT PDF (SAMPLING STO) ======
+// ====== EXPORT PDF (SAMPLING STO) — Laporan STO standar manufaktur ======
 function exportPdf() {
   if (!appState.currentAccount) {
     showToast('Pilih gudang terlebih dahulu', 'error');
@@ -2160,45 +2160,220 @@ function exportPdf() {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const acc = appState.currentAccount;
-  const total = rows.length;
-  const filled = rows.filter(r => r.stokFisik !== undefined && r.stokFisik !== null && r.stokFisik !== '').length;
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginX = 14;
+  const usableW = pageW - marginX * 2;
 
+  // ---- Susun & klasifikasikan data (field name yang benar sesuai struktur appState.rows) ----
+  const statusMeta = {
+    match:         { label: 'Sesuai',       color: [14, 159, 110] },
+    minor:         { label: 'Toleransi',    color: [10, 93, 176] },
+    major:         { label: 'ULANG!',       color: [220, 38, 38] },
+    unrecorded:    { label: 'Tak Tercatat', color: [180, 83, 9] },
+    criticalShort: { label: 'HILANG!',      color: [220, 38, 38] },
+    pending:       { label: 'Belum',        color: [152, 165, 184] }
+  };
+
+  const enriched = rows.map((r, i) => {
+    const sistem = Number(r.stokSistem) || 0;
+    const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
+    let selisih = '-', variancePercent = null, status = 'pending', needRecount = false;
+    if (hasValue) {
+      const c = classifyVariance(Number(r.stokFisik), sistem);
+      selisih = c.selisih;
+      variancePercent = c.variancePercent;
+      status = c.status;
+      needRecount = c.needRecount;
+    }
+    return {
+      no: i + 1,
+      kode: r['Material Code'] || '',
+      nama: r['Material Name'] || '',
+      lokasi: r['Lokasi'] || '',
+      batch: r['Batch'] || '',
+      unit: r['Unit'] || '',
+      sistem,
+      fisik: hasValue ? Number(r.stokFisik) : '-',
+      selisih, variancePercent, status, needRecount
+    };
+  });
+
+  const total = enriched.length;
+  const filled = enriched.filter(r => r.status !== 'pending').length;
+  const matchCount = enriched.filter(r => r.status === 'match').length;
+  const minorCount = enriched.filter(r => r.status === 'minor').length;
+  const majorCount = enriched.filter(r => r.needRecount).length;
+  const ira = filled > 0 ? Math.round(((matchCount + minorCount) / filled) * 1000) / 10 : 100;
+
+  // ---- HEADER ----
+  let y = 16;
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text(`${APP_NAME} - Laporan Sampling STO`, 14, 16);
-  doc.setFontSize(10);
-  doc.text(`Gudang: ${acc.name} (${acc.sheetName})`, 14, 24);
-  doc.text(`Tanggal Export: ${new Date().toLocaleString('id-ID')}`, 14, 30);
-  doc.text(`Total Item: ${total}   |   Terisi: ${filled}`, 14, 36);
+  doc.setTextColor(15, 30, 51);
+  doc.text(appState.config.company || APP_NAME, marginX, y);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(90, 100, 120);
+  doc.text('Laporan Stock Take Opname (STO)', marginX, y + 5);
+  doc.setFontSize(8);
+  doc.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`, pageW - marginX, y, { align: 'right' });
+  doc.text(`${APP_NAME} v${APP_VERSION}`, pageW - marginX, y + 5, { align: 'right' });
 
-  const body = rows.map((r, i) => [
-    i + 1,
-    r.materialCode || '',
-    r.materialName || '',
-    r.lokasi || '',
-    r.stokSistem ?? '',
-    r.stokFisik ?? '',
-    r.selisih ?? '',
-    r.status || ''
-  ]);
+  y += 10;
+  doc.setDrawColor(230, 235, 242);
+  doc.setLineWidth(0.4);
+  doc.line(marginX, y, pageW - marginX, y);
+  y += 6;
 
-  if (doc.autoTable) {
-    doc.autoTable({
-      startY: 42,
-      head: [['#', 'Kode', 'Nama Material', 'Lokasi', 'Sistem', 'Fisik', 'Selisih', 'Status']],
-      body: body,
-      styles: { fontSize: 8 }
+  doc.setFontSize(9);
+  doc.setTextColor(15, 30, 51);
+  const infoLeft = [
+    ['Gudang', `${acc.name || '-'} (${acc.sheetName || '-'})`],
+    ['Operator', appState.config.username || '-']
+  ];
+  const infoRight = [
+    ['Tanggal STO', new Date().toLocaleDateString('id-ID')],
+    ['Toleransi Selisih', `${appState.config.tolerancePercent || 2}%`]
+  ];
+  let ly = y, ry = y;
+  infoLeft.forEach(([label, val]) => {
+    doc.setFont('helvetica', 'bold'); doc.text(label + ':', marginX, ly);
+    doc.setFont('helvetica', 'normal'); doc.text(String(val), marginX + 28, ly);
+    ly += 5;
+  });
+  infoRight.forEach(([label, val]) => {
+    doc.setFont('helvetica', 'bold'); doc.text(label + ':', marginX + usableW / 2, ry);
+    doc.setFont('helvetica', 'normal'); doc.text(String(val), marginX + usableW / 2 + 34, ry);
+    ry += 5;
+  });
+  y += 14;
+
+  // ---- SUMMARY KPI (standar cycle counting: total, terisi, sesuai, toleransi, wajib ulang, IRA) ----
+  const kpis = [
+    { label: 'Total Item', value: total, color: [10, 93, 176] },
+    { label: 'Terisi', value: filled, color: [14, 159, 110] },
+    { label: 'Sesuai', value: matchCount, color: [14, 159, 110] },
+    { label: 'Toleransi', value: minorCount, color: [10, 93, 176] },
+    { label: 'Perlu Ulang', value: majorCount, color: [220, 38, 38] },
+    { label: 'IRA (Akurasi)', value: ira + '%', color: ira >= 98 ? [14, 159, 110] : (ira >= 90 ? [180, 83, 9] : [220, 38, 38]) }
+  ];
+  const boxW = usableW / kpis.length;
+  kpis.forEach((k, i) => {
+    const bx = marginX + i * boxW;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(230, 235, 242);
+    doc.roundedRect(bx + 1, y, boxW - 2, 16, 1.5, 1.5, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.3);
+    doc.setTextColor(120, 130, 150);
+    doc.text(k.label.toUpperCase(), bx + boxW / 2, y + 5, { align: 'center' });
+    doc.setFontSize(11);
+    doc.setTextColor(k.color[0], k.color[1], k.color[2]);
+    doc.text(String(k.value), bx + boxW / 2, y + 12.5, { align: 'center' });
+  });
+  y += 23;
+
+  // ---- TABEL DETAIL ----
+  const cols = [
+    { key: 'no', label: 'No', w: 8, align: 'center' },
+    { key: 'kode', label: 'Kode', w: 18, align: 'left' },
+    { key: 'nama', label: 'Nama Material', w: 46, align: 'left' },
+    { key: 'lokasi', label: 'Lokasi', w: 18, align: 'left' },
+    { key: 'batch', label: 'Batch', w: 14, align: 'left' },
+    { key: 'unit', label: 'Satuan', w: 10, align: 'center' },
+    { key: 'sistem', label: 'Sistem', w: 12, align: 'right' },
+    { key: 'fisik', label: 'Fisik', w: 12, align: 'right' },
+    { key: 'selisih', label: 'Selisih', w: 12, align: 'right' },
+    { key: 'variancePercent', label: 'Var%', w: 12, align: 'right' },
+    { key: 'status', label: 'Status', w: 20, align: 'center' }
+  ];
+  const rowH = 7, headH = 8;
+
+  function alignFor(a) { return a === 'right' ? 'right' : (a === 'center' ? 'center' : 'left'); }
+  function xFor(cx, col) { return col.align === 'right' ? cx + col.w - 2 : (col.align === 'center' ? cx + col.w / 2 : cx + 2); }
+
+  function drawTableHeader(yy) {
+    doc.setFillColor(10, 93, 176);
+    doc.rect(marginX, yy, usableW, headH, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    let cx = marginX;
+    cols.forEach(col => {
+      doc.text(col.label, xFor(cx, col), yy + headH / 2 + 1.3, { align: alignFor(col.align) });
+      cx += col.w;
     });
-  } else {
-    let y = 46;
-    body.forEach(r => {
-      doc.text(r.join('  |  '), 14, y);
-      y += 6;
-    });
+    return yy + headH;
   }
 
-  doc.save(`Sampling_${acc.sheetName}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  y = drawTableHeader(y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+
+  enriched.forEach((r, idx) => {
+    if (y + rowH > pageH - 32) {
+      doc.addPage();
+      y = drawTableHeader(16);
+    }
+    const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+    if (r.needRecount) doc.setFillColor(254, 242, 242); else doc.setFillColor(bg[0], bg[1], bg[2]);
+    doc.rect(marginX, y, usableW, rowH, 'F');
+    doc.setDrawColor(230, 235, 242);
+    doc.rect(marginX, y, usableW, rowH, 'S');
+
+    const meta = statusMeta[r.status] || statusMeta.pending;
+    let cx = marginX;
+    cols.forEach(col => {
+      let val = r[col.key];
+      if (col.key === 'variancePercent') val = (val === null || val === undefined) ? '-' : val.toFixed(1) + '%';
+      if (col.key === 'status') {
+        doc.setTextColor(meta.color[0], meta.color[1], meta.color[2]);
+        doc.setFont('helvetica', 'bold');
+        val = meta.label;
+      } else {
+        doc.setTextColor(15, 30, 51);
+        doc.setFont('helvetica', 'normal');
+      }
+      val = String(val === undefined || val === null ? '' : val);
+      if (col.key === 'nama' && val.length > 34) val = val.slice(0, 32) + '..';
+      doc.text(val, xFor(cx, col), y + rowH / 2 + 1.2, { align: alignFor(col.align) });
+      cx += col.w;
+    });
+    y += rowH;
+  });
+
+  // ---- SIGN-OFF (standar STO manufaktur: dihitung/diperiksa/disetujui) ----
+  y += 14;
+  if (y > pageH - 42) { doc.addPage(); y = 20; }
+  const signW = usableW / 3;
+  ['Dihitung oleh', 'Diperiksa oleh', 'Disetujui oleh'].forEach((label, i) => {
+    const sx = marginX + i * signW;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 30, 51);
+    doc.text(label, sx, y);
+    doc.setDrawColor(150, 160, 180);
+    doc.line(sx, y + 20, sx + signW - 10, y + 20);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(120, 130, 150);
+    doc.text('Nama & Tanda Tangan', sx, y + 24);
+  });
+
+  // ---- FOOTER: nomor halaman ----
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(152, 165, 184);
+    doc.text(`Halaman ${p} dari ${pageCount} — ${APP_NAME}`, pageW / 2, pageH - 8, { align: 'center' });
+  }
+
+  doc.save(`STO_${acc.sheetName}_${new Date().toISOString().slice(0, 10)}.pdf`);
   showToast('PDF berhasil diexport', 'success');
 }
 
