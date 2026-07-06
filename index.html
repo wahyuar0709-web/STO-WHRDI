@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.2 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.3 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1181,7 +1181,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.2';
+const APP_VERSION = '3.3';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -2294,14 +2294,13 @@ function exportPdf() {
 
   function alignFor(a) { return a === 'right' ? 'right' : (a === 'center' ? 'center' : 'left'); }
   function xFor(cx, col) { return col.align === 'right' ? cx + col.w - 2 : (col.align === 'center' ? cx + col.w / 2 : cx + 2); }
-  // Potong teks otomatis sesuai lebar kolom aktual (pakai getTextWidth) supaya TIDAK PERNAH
-  // tumpang tindih dengan kolom sebelah, berapapun panjang datanya (kode/lokasi/batch/nama).
-  function fitText(text, maxW) {
-    text = String(text === undefined || text === null ? '' : text);
-    if (doc.getTextWidth(text) <= maxW) return text;
-    let t = text;
-    while (t.length > 1 && doc.getTextWidth(t + '..') > maxW) t = t.slice(0, -1);
-    return t + '..';
+  const WRAP_COLS = ['kode', 'nama', 'lokasi', 'batch'];
+  const lineH = 3.3; // tinggi baris teks (mm) pada font 7.5pt
+  const padY = 1.6;
+  // Pecah teks ke beberapa baris sesuai lebar kolom (wrap text) — TIDAK ADA teks yang dipotong,
+  // kalau tidak muat otomatis lanjut ke baris di bawahnya, dan tinggi baris tabel menyesuaikan.
+  function wrapCell(text, maxW) {
+    return doc.splitTextToSize(String(text === undefined || text === null ? '-' : text) || '-', Math.max(maxW, 6));
   }
 
   function drawTableHeader(yy) {
@@ -2323,15 +2322,28 @@ function exportPdf() {
   doc.setFontSize(7.5);
 
   enriched.forEach((r, idx) => {
-    if (y + rowH > pageH - 32) {
+    // Hitung wrap tiap kolom teks dulu untuk menentukan tinggi baris yang dibutuhkan
+    const wrapped = {};
+    let maxLines = 1;
+    WRAP_COLS.forEach(key => {
+      const col = cols.find(c => c.key === key);
+      const w = wrapCell(r[key], col.w - 4);
+      wrapped[key] = w;
+      if (w.length > maxLines) maxLines = w.length;
+    });
+    const dynRowH = Math.max(rowH, maxLines * lineH + padY * 2);
+
+    // Kalau baris ini tidak muat di halaman saat ini, pindah halaman baru dulu
+    if (y + dynRowH > pageH - 32) {
       doc.addPage();
       y = drawTableHeader(16);
     }
+
     const bg = idx % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
     if (r.needRecount) doc.setFillColor(254, 242, 242); else doc.setFillColor(bg[0], bg[1], bg[2]);
-    doc.rect(marginX, y, usableW, rowH, 'F');
+    doc.rect(marginX, y, usableW, dynRowH, 'F');
     doc.setDrawColor(230, 235, 242);
-    doc.rect(marginX, y, usableW, rowH, 'S');
+    doc.rect(marginX, y, usableW, dynRowH, 'S');
 
     const meta = statusMeta[r.status] || statusMeta.pending;
     let cx = marginX;
@@ -2346,12 +2358,22 @@ function exportPdf() {
         doc.setTextColor(15, 30, 51);
         doc.setFont('helvetica', 'normal');
       }
-      val = String(val === undefined || val === null ? '' : val);
-      if (['kode', 'nama', 'lokasi', 'batch'].includes(col.key)) val = fitText(val, col.w - 4);
-      doc.text(val, xFor(cx, col), y + rowH / 2 + 1.2, { align: alignFor(col.align) });
+
+      if (WRAP_COLS.includes(col.key)) {
+        const lines = wrapped[col.key];
+        const blockH = lines.length * lineH;
+        let ty = y + (dynRowH - blockH) / 2 + lineH * 0.75;
+        lines.forEach(line => {
+          doc.text(line, xFor(cx, col), ty, { align: alignFor(col.align) });
+          ty += lineH;
+        });
+      } else {
+        val = String(val === undefined || val === null ? '' : val);
+        doc.text(val, xFor(cx, col), y + dynRowH / 2 + 1.2, { align: alignFor(col.align) });
+      }
       cx += col.w;
     });
-    y += rowH;
+    y += dynRowH;
   });
 
   // ---- KETERANGAN ISTILAH (standar cycle counting manufaktur, awam-friendly) ----
