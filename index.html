@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.6 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.7 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1190,7 +1190,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.6';
+const APP_VERSION = '3.7';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1602,6 +1602,17 @@ function resumeSampling(sessionId) {
 //  major         : selisih% > toleransi  -> WAJIB hitung ulang (recount) sebelum sesi ditutup
 //  unrecorded    : sistem = 0, fisik > 0 -> stok tidak tercatat di sistem, perlu investigasi
 //  criticalShort : sistem > 0, fisik = 0 -> kehilangan stok total, prioritas investigasi tertinggi
+function formatDateOnly(val) {
+  if (!val) return '-';
+  const s = String(val);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const [y, m, d] = s.slice(0, 10).split('-');
+    return `${d}/${m}/${y}`;
+  }
+  const d2 = new Date(s);
+  return isNaN(d2) ? s.slice(0, 10) : d2.toLocaleDateString('id-ID');
+}
+
 function classifyVariance(fisik, sistem) {
   const tol = appState.config.tolerancePercent || 2;
   const selisih = fisik - sistem;
@@ -1689,9 +1700,10 @@ function renderSamplingList() {
           <div style="font-weight:700;font-size:13px;color:var(--tx)">${r['Material Name'] || r['Material Code'] || 'Item ' + (i + 1)}</div>
           <span id="smp-delta-${i}">${deltaTag}</span>
         </div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''}</div>
-        ${r['Spesifikasi'] ? `<div style="font-size:11px;color:var(--tx3);margin-top:1px">Spek: ${r['Spesifikasi']}</div>` : ''}
-        <div style="font-size:11px;color:var(--tx3);margin-top:1px">Tgl Datang: ${r['Tanggal Kedatangan'] || '-'} · Supplier: ${r['Supplier'] || '-'}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--tx2);margin-top:3px">${r['Material Code'] || '-'}</div>
+        ${r['Spesifikasi'] ? `<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-top:1px">Spek: ${r['Spesifikasi']}</div>` : ''}
+        <div style="font-size:10px;color:var(--tx3);margin-top:3px">Tgl Datang: ${formatDateOnly(r['Tanggal Kedatangan'])}</div>
+        <div style="font-size:10px;color:var(--tx3)">Supplier: ${r['Supplier'] || '-'}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <input type="text" value="${r['Lokasi'] || ''}" placeholder="Lokasi..." oninput="updateItemField(${i},'Lokasi',this.value)"
             style="flex:1;min-width:0;padding:8px 9px;border:1px solid var(--bdr);border-radius:9px;font-size:12px">
@@ -2275,7 +2287,7 @@ function exportPdf() {
       kode: r['Material Code'] || '',
       nama: r['Material Name'] || '',
       spesifikasi: r['Spesifikasi'] || '-',
-      tglDatang: r['Tanggal Kedatangan'] || '-',
+      tglDatang: formatDateOnly(r['Tanggal Kedatangan']),
       lokasi: r['Lokasi'] || '',
       batch: r['Batch'] || '',
       supplier: r['Supplier'] || '-',
@@ -2419,10 +2431,12 @@ function exportPdf() {
     let maxLines = 1;
     WRAP_COLS.forEach(key => {
       const col = cols.find(c => c.key === key);
+      doc.setFont('helvetica', (key === 'kode' || key === 'spesifikasi') ? 'bold' : 'normal');
       const w = wrapCell(r[key], col.w - 4);
       wrapped[key] = w;
       if (w.length > maxLines) maxLines = w.length;
     });
+    doc.setFont('helvetica', 'normal');
     const dynRowH = Math.max(rowH, maxLines * lineH + padY * 2);
 
     // Kalau baris ini tidak muat di halaman saat ini, pindah halaman baru dulu
@@ -2446,6 +2460,9 @@ function exportPdf() {
         doc.setTextColor(meta.color[0], meta.color[1], meta.color[2]);
         doc.setFont('helvetica', 'bold');
         val = meta.label;
+      } else if (col.key === 'kode' || col.key === 'spesifikasi') {
+        doc.setTextColor(15, 30, 51);
+        doc.setFont('helvetica', 'bold');
       } else {
         doc.setTextColor(15, 30, 51);
         doc.setFont('helvetica', 'normal');
