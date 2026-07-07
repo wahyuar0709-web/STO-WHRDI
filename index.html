@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.5 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.6 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1190,7 +1190,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.5';
+const APP_VERSION = '3.6';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1691,6 +1691,7 @@ function renderSamplingList() {
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''}</div>
         ${r['Spesifikasi'] ? `<div style="font-size:11px;color:var(--tx3);margin-top:1px">Spek: ${r['Spesifikasi']}</div>` : ''}
+        <div style="font-size:11px;color:var(--tx3);margin-top:1px">Tgl Datang: ${r['Tanggal Kedatangan'] || '-'} · Supplier: ${r['Supplier'] || '-'}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <input type="text" value="${r['Lokasi'] || ''}" placeholder="Lokasi..." oninput="updateItemField(${i},'Lokasi',this.value)"
             style="flex:1;min-width:0;padding:8px 9px;border:1px solid var(--bdr);border-radius:9px;font-size:12px">
@@ -1708,7 +1709,15 @@ function renderSamplingList() {
             <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3"/></svg>
           </button>
         </div>
-        <span id="smp-recount-${i}">${recountBadge}</span>
+        <input type="text" id="smp-calcnote-${i}" value="${r.calcNote || ''}" placeholder="Cara hitung, mis: 2 kemasan x 250"
+          oninput="updateItemField(${i},'calcNote',this.value)"
+          style="width:100%;margin-top:8px;padding:8px 9px;border:1px solid var(--bdr);border-radius:9px;font-size:11px;color:var(--tx2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+          <span id="smp-recount-${i}">${recountBadge}</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="saveItemNow(${i})" style="padding:6px 12px">
+            <span id="smp-savebtn-${i}">Simpan Item</span>
+          </button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1749,6 +1758,17 @@ function updateItemField(idx, field, value) {
   samplingSaveTimer = setTimeout(() => saveSamplingSession('draft', false), 1000);
 }
 
+function saveItemNow(idx) {
+  clearTimeout(samplingSaveTimer);
+  const btnEl = document.getElementById(`smp-savebtn-${idx}`);
+  if (btnEl) btnEl.textContent = 'Menyimpan...';
+  saveSamplingSession('draft', false);
+  setTimeout(() => {
+    if (btnEl) btnEl.textContent = 'Tersimpan ✓';
+    setTimeout(() => { if (btnEl) btnEl.textContent = 'Simpan Item'; }, 1500);
+  }, 400);
+}
+
 function updateStokFisik(idx, value) {
   appState.rows[idx].stokFisik = value === '' ? '' : Number(value);
   document.getElementById('smp-filled').textContent =
@@ -1764,6 +1784,15 @@ function saveSamplingSession(status, silent) {
   const statusEl = document.getElementById('sampling-save-status');
   if (!silent && statusEl) statusEl.innerHTML = `<div class="settings-status" style="background:var(--blue-lt);color:var(--blue)">${SVG.loader}<span>Menyimpan progres...</span></div>`;
 
+  // Sertakan hasil klasifikasi (selisih/varians%/status) yang SAMA PERSIS dengan yang ditampilkan
+  // di kartu & di PDF, supaya data di spreadsheet selalu konsisten dengan laporan.
+  const enrichedRows = (appState.rows || []).map(r => {
+    const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
+    if (!hasValue) return { ...r, selisih: '', variancePercent: '', status: 'pending', needRecount: false };
+    const c = classifyVariance(Number(r.stokFisik), Number(r.stokSistem));
+    return { ...r, selisih: c.selisih, variancePercent: c.variancePercent, status: c.status, needRecount: c.needRecount };
+  });
+
   fetch(appState.config.cloudSyncUrl, {
     method: 'POST',
     body: JSON.stringify({
@@ -1772,7 +1801,7 @@ function saveSamplingSession(status, silent) {
       sheetName: appState.currentAccount.sheetName,
       groupId: appState.currentAccount.sheetName,
       status: status,
-      dataJson: JSON.stringify(appState.rows),
+      dataJson: JSON.stringify(enrichedRows),
       operator: localStorage.getItem('sto_username') || '',
       samplingType: document.querySelector('input[name="sampling-mode"]:checked')?.value || 'manual'
     })
@@ -1792,6 +1821,7 @@ function saveSamplingSession(status, silent) {
 // ====== KALKULATOR STOK PER ITEM ======
 let calcExpr = '0';
 let calcCurrentIdx = null;
+let calcNoteDraft = '';
 
 function openCalcModal(idx) {
   calcCurrentIdx = idx;
@@ -1801,6 +1831,7 @@ function openCalcModal(idx) {
   document.getElementById('calc-pack-count').value = '';
   document.getElementById('calc-pack-extra').value = '';
   document.getElementById('calc-pack-total').textContent = '0';
+  calcNoteDraft = '';
   const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
   calcExpr = hasValue ? String(r.stokFisik) : '0';
   document.getElementById('calc-display').textContent = calcExpr;
@@ -1820,6 +1851,7 @@ function updatePackCalc() {
   document.getElementById('calc-pack-total').textContent = total;
   calcExpr = String(total);
   document.getElementById('calc-display').textContent = calcExpr;
+  calcNoteDraft = (qty > 0 && count > 0) ? `${count} kemasan x ${qty}${extra ? ' + ' + extra + ' eceran' : ''} = ${total}` : '';
 }
 
 function calcClear() {
@@ -1876,6 +1908,11 @@ function applyCalcResult() {
   const inputEl = document.getElementById(`smp-input-${idx}`);
   if (inputEl) inputEl.value = val;
   updateStokFisik(idx, val);
+  if (calcNoteDraft) {
+    appState.rows[idx].calcNote = calcNoteDraft;
+    const noteEl = document.getElementById(`smp-calcnote-${idx}`);
+    if (noteEl) noteEl.value = calcNoteDraft;
+  }
   closeCalcModal();
   showToast(`Stok fisik diisi: ${val}`, 'success');
 }
@@ -2085,13 +2122,13 @@ function downloadTemplate() {
   }
   try {
     const wb = XLSX.utils.book_new();
-    const headers = ['Material Code', 'Material Name', 'Spesifikasi', 'Batch', 'Lokasi', 'Stok Inventory', 'Unit', 'Supplier'];
+    const headers = ['Material Code', 'Material Name', 'Spesifikasi', 'Tanggal Kedatangan', 'Batch', 'Lokasi', 'Stok Inventory', 'Unit', 'Supplier'];
     const ws = XLSX.utils.aoa_to_sheet([
       headers,
-      ['MAT-001', 'Kayu Jati Grade A', '100x200x4 cm', 'BTH-2026-01', 'Gudang A - Rak 1', 50, 'LBR', 'PT Kayu Nusantara'],
-      ['MAT-002', 'MDF Board', '120x240x1.8 cm', 'BTH-2026-02', 'Gudang A - Rak 3', 120, 'LBR', 'CV Papan Jaya'],
+      ['MAT-001', 'Kayu Jati Grade A', '100x200x4 cm', '2026-01-15', 'BTH-2026-01', 'Gudang A - Rak 1', 50, 'LBR', 'PT Kayu Nusantara'],
+      ['MAT-002', 'MDF Board', '120x240x1.8 cm', '2026-02-03', 'BTH-2026-02', 'Gudang A - Rak 3', 120, 'LBR', 'CV Papan Jaya'],
     ]);
-    ws['!cols'] = [{wch:16}, {wch:28}, {wch:22}, {wch:18}, {wch:20}, {wch:14}, {wch:8}, {wch:22}];
+    ws['!cols'] = [{wch:16}, {wch:28}, {wch:22}, {wch:16}, {wch:18}, {wch:20}, {wch:14}, {wch:8}, {wch:22}];
     XLSX.utils.book_append_sheet(wb, ws, 'Master Data');
     XLSX.writeFile(wb, 'Template_STO_v2.xlsx');
     showToast('Template berhasil diunduh', 'success');
@@ -2205,7 +2242,7 @@ function exportPdf() {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
   const acc = appState.currentAccount;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -2237,11 +2274,15 @@ function exportPdf() {
       no: i + 1,
       kode: r['Material Code'] || '',
       nama: r['Material Name'] || '',
+      spesifikasi: r['Spesifikasi'] || '-',
+      tglDatang: r['Tanggal Kedatangan'] || '-',
       lokasi: r['Lokasi'] || '',
       batch: r['Batch'] || '',
+      supplier: r['Supplier'] || '-',
       unit: r['Unit'] || '',
       sistem,
       fisik: hasValue ? Number(r.stokFisik) : '-',
+      caraHitung: r.calcNote || '-',
       selisih, variancePercent, status, needRecount
     };
   });
@@ -2258,14 +2299,16 @@ function exportPdf() {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(15, 30, 51);
-  doc.text(appState.config.company || APP_NAME, marginX, y);
+  const companyLines = doc.splitTextToSize(appState.config.company || APP_NAME, usableW * 0.55);
+  doc.text(companyLines, marginX, y);
+  y += (companyLines.length - 1) * 5.5;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(90, 100, 120);
   doc.text('Laporan Stock Take Opname (STO)', marginX, y + 5);
   doc.setFontSize(8);
-  doc.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`, pageW - marginX, y, { align: 'right' });
-  doc.text(`${APP_NAME} v${APP_VERSION}`, pageW - marginX, y + 5, { align: 'right' });
+  doc.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`, pageW - marginX, 16, { align: 'right' });
+  doc.text(`${APP_NAME} v${APP_VERSION}`, pageW - marginX, 21, { align: 'right' });
 
   y += 10;
   doc.setDrawColor(230, 235, 242);
@@ -2323,23 +2366,27 @@ function exportPdf() {
 
   // ---- TABEL DETAIL ----
   const cols = [
-    { key: 'no', label: 'No', w: 8, align: 'center' },
-    { key: 'kode', label: 'Kode', w: 18, align: 'left' },
-    { key: 'nama', label: 'Nama Material', w: 50, align: 'left' },
-    { key: 'lokasi', label: 'Lokasi', w: 20, align: 'left' },
-    { key: 'batch', label: 'Batch', w: 16, align: 'left' },
-    { key: 'unit', label: 'Satuan', w: 12, align: 'center' },
+    { key: 'no', label: 'No', w: 7, align: 'center' },
+    { key: 'kode', label: 'Kode', w: 16, align: 'left' },
+    { key: 'nama', label: 'Nama Material', w: 36, align: 'left' },
+    { key: 'spesifikasi', label: 'Spesifikasi', w: 26, align: 'left' },
+    { key: 'tglDatang', label: 'Tgl Datang', w: 16, align: 'center' },
+    { key: 'batch', label: 'Batch', w: 14, align: 'left' },
+    { key: 'lokasi', label: 'Lokasi', w: 18, align: 'left' },
+    { key: 'supplier', label: 'Supplier', w: 22, align: 'left' },
+    { key: 'unit', label: 'Satuan', w: 10, align: 'center' },
     { key: 'sistem', label: 'Sistem', w: 12, align: 'right' },
     { key: 'fisik', label: 'Fisik', w: 12, align: 'right' },
-    { key: 'selisih', label: 'Selisih', w: 12, align: 'right' },
-    { key: 'variancePercent', label: 'Var (%)*', w: 14, align: 'right' },
-    { key: 'status', label: 'Status', w: 20, align: 'center' }
+    { key: 'selisih', label: 'Selisih (Qty)', w: 14, align: 'right' },
+    { key: 'variancePercent', label: 'Selisih (%)*', w: 14, align: 'right' },
+    { key: 'caraHitung', label: 'Cara Hitung*', w: 32, align: 'left' },
+    { key: 'status', label: 'Status', w: 16, align: 'center' }
   ];
   const rowH = 7, headH = 8;
 
   function alignFor(a) { return a === 'right' ? 'right' : (a === 'center' ? 'center' : 'left'); }
   function xFor(cx, col) { return col.align === 'right' ? cx + col.w - 2 : (col.align === 'center' ? cx + col.w / 2 : cx + 2); }
-  const WRAP_COLS = ['kode', 'nama', 'lokasi', 'batch'];
+  const WRAP_COLS = ['kode', 'nama', 'spesifikasi', 'batch', 'lokasi', 'supplier', 'caraHitung'];
   const lineH = 3.3; // tinggi baris teks (mm) pada font 7.5pt
   const padY = 1.6;
   // Pecah teks ke beberapa baris sesuai lebar kolom (wrap text) — TIDAK ADA teks yang dipotong,
@@ -2426,10 +2473,12 @@ function exportPdf() {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.8);
   const legendLines = [
-    'Var (%) = Varians: persentase selisih stok fisik terhadap stok sistem. Rumus: |Fisik - Sistem| / Sistem x 100%.',
-    `Toleransi = selisih masih dalam batas wajar (<= ${appState.config.tolerancePercent || 2}% dari stok sistem), dianggap wajar dan TIDAK wajib dihitung ulang.`,
-    `ULANG! = selisih melebihi batas toleransi (> ${appState.config.tolerancePercent || 2}%), WAJIB dihitung ulang sebelum sesi STO ditutup.`,
+    'Selisih (Qty) = selisih jumlah apa adanya (Fisik - Sistem). Selisih (%) = selisih itu diubah ke persentase terhadap stok sistem, rumus: |Fisik - Sistem| / Sistem x 100%.',
+    'Kenapa perlu Selisih (%)? Karena selisih Qty saja bisa menyesatkan: selisih 5 pcs itu BESAR untuk stok 10 pcs (50%), tapi KECIL untuk stok 10.000 pcs (0.05%). Persentase inilah yang dipakai untuk memutuskan apakah selisih itu wajar atau harus dihitung ulang.',
+    `Toleransi = Selisih (%) masih dalam batas wajar (<= ${appState.config.tolerancePercent || 2}%), dianggap wajar (rounding/human error kecil), TIDAK wajib dihitung ulang.`,
+    `ULANG! = Selisih (%) melebihi batas toleransi (> ${appState.config.tolerancePercent || 2}%), WAJIB dihitung ulang sebelum sesi STO ditutup.`,
     'Tak Tercatat / Hilang! = stok fisik ditemukan tapi tidak ada di sistem, atau sebaliknya stok sistem ada tapi fisik nol — perlu investigasi lebih lanjut.',
+    'Cara Hitung = catatan metode penghitungan fisik per item, contoh: "2 kemasan x 250 = 500" (2 kemasan, tiap kemasan isi 250), agar hasil hitungan bisa ditelusuri/diverifikasi ulang.',
     'IRA (Inventory Record Accuracy / Akurasi Catatan Stok) = KPI standar industri manufaktur untuk mengukur akurasi data stok. Rumus: (Item Sesuai + Item dalam Toleransi) / Item yang Sudah Dihitung x 100%. Target umum industri: >= 98%.'
   ];
   const wrapped = legendLines.map(line => doc.splitTextToSize('• ' + line, usableW - 8));
