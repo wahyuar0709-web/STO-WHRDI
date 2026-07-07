@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.4 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.5 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1023,7 +1023,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 
         <div id="sampling-save-status" style="margin-bottom:10px"></div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
-          <input type="text" id="smp-search" placeholder="Cari kode/nama material..." oninput="renderSamplingList()"
+          <input type="text" id="smp-search" placeholder="Cari kode/nama/spesifikasi..." oninput="renderSamplingList()"
             style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:13px">
           <select id="smp-filter-lokasi" onchange="renderSamplingList()"
             style="padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:13px;max-width:130px">
@@ -1190,7 +1190,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.4';
+const APP_VERSION = '3.5';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1664,7 +1664,7 @@ function renderSamplingList() {
   const indexed = rows.map((r, i) => ({ r, i })).filter(({ r }) => {
     if (lokasiFilter && r['Lokasi'] !== lokasiFilter) return false;
     if (search) {
-      const hay = `${r['Material Code'] || ''} ${r['Material Name'] || ''}`.toLowerCase();
+      const hay = `${r['Material Code'] || ''} ${r['Material Name'] || ''} ${r['Spesifikasi'] || ''}`.toLowerCase();
       if (!hay.includes(search)) return false;
     }
     return true;
@@ -1690,6 +1690,7 @@ function renderSamplingList() {
           <span id="smp-delta-${i}">${deltaTag}</span>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''}</div>
+        ${r['Spesifikasi'] ? `<div style="font-size:11px;color:var(--tx3);margin-top:1px">Spek: ${r['Spesifikasi']}</div>` : ''}
         <div style="display:flex;gap:8px;margin-top:8px">
           <input type="text" value="${r['Lokasi'] || ''}" placeholder="Lokasi..." oninput="updateItemField(${i},'Lokasi',this.value)"
             style="flex:1;min-width:0;padding:8px 9px;border:1px solid var(--bdr);border-radius:9px;font-size:12px">
