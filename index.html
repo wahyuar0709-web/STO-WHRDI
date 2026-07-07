@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v3.3 — Warehouse Stock Taking</title>
+<title>RDI-STO v3.4 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1022,6 +1022,15 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         </div>
 
         <div id="sampling-save-status" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="text" id="smp-search" placeholder="Cari kode/nama material..." oninput="renderSamplingList()"
+            style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:13px">
+          <select id="smp-filter-lokasi" onchange="renderSamplingList()"
+            style="padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:13px;max-width:130px">
+            <option value="">Semua Lokasi</option>
+          </select>
+        </div>
+        <div id="smp-filter-info" style="font-size:11px;color:var(--tx3);margin-bottom:8px"></div>
         <div id="sampling-list"></div>
 
         <button class="btn btn-primary" onclick="finishSampling()" style="margin-bottom:8px">
@@ -1181,7 +1190,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '3.3';
+const APP_VERSION = '3.4';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1625,6 +1634,15 @@ function computeIRA(rows) {
   return { ira, needRecount, counted };
 }
 
+function populateLokasiFilter(rows) {
+  const sel = document.getElementById('smp-filter-lokasi');
+  if (!sel) return;
+  const cur = sel.value;
+  const locs = [...new Set(rows.map(r => r['Lokasi']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Semua Lokasi</option>' + locs.map(l => `<option value="${l}">${l}</option>`).join('');
+  if (locs.includes(cur)) sel.value = cur;
+}
+
 function renderSamplingList() {
   const el = document.getElementById('sampling-list');
   const rows = appState.rows || [];
@@ -1640,7 +1658,21 @@ function renderSamplingList() {
     iraCard.classList.add(ira >= 98 ? 'ira-good' : (ira >= 90 ? 'ira-warn' : 'ira-bad'));
   }
 
-  el.innerHTML = rows.map((r, i) => {
+  populateLokasiFilter(rows);
+  const search = (document.getElementById('smp-search')?.value || '').trim().toLowerCase();
+  const lokasiFilter = document.getElementById('smp-filter-lokasi')?.value || '';
+  const indexed = rows.map((r, i) => ({ r, i })).filter(({ r }) => {
+    if (lokasiFilter && r['Lokasi'] !== lokasiFilter) return false;
+    if (search) {
+      const hay = `${r['Material Code'] || ''} ${r['Material Name'] || ''}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  const infoEl = document.getElementById('smp-filter-info');
+  if (infoEl) infoEl.textContent = (search || lokasiFilter) ? `Menampilkan ${indexed.length} dari ${rows.length} item` : '';
+
+  el.innerHTML = indexed.map(({ r, i }) => {
     const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
     let deltaTag = '', recountBadge = '';
     if (hasValue) {
@@ -1657,7 +1689,13 @@ function renderSamplingList() {
           <div style="font-weight:700;font-size:13px;color:var(--tx)">${r['Material Name'] || r['Material Code'] || 'Item ' + (i + 1)}</div>
           <span id="smp-delta-${i}">${deltaTag}</span>
         </div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''} · ${r['Lokasi'] || '-'}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${r['Material Code'] || ''}</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="text" value="${r['Lokasi'] || ''}" placeholder="Lokasi..." oninput="updateItemField(${i},'Lokasi',this.value)"
+            style="flex:1;min-width:0;padding:8px 9px;border:1px solid var(--bdr);border-radius:9px;font-size:12px">
+          <input type="text" value="${r['Batch'] || ''}" placeholder="Batch..." oninput="updateItemField(${i},'Batch',this.value)"
+            style="flex:1;min-width:0;padding:8px 9px;border:1px solid var(--bdr);border-radius:9px;font-size:12px">
+        </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
           <div style="font-size:12px;color:var(--tx3)">Stok Sistem: <b style="color:var(--tx)">${r.stokSistem}</b> ${r['Unit'] || ''}</div>
         </div>
@@ -1702,6 +1740,12 @@ function refreshItemBadge(idx) {
     iraCard.classList.remove('ira-good', 'ira-warn', 'ira-bad');
     iraCard.classList.add(ira >= 98 ? 'ira-good' : (ira >= 90 ? 'ira-warn' : 'ira-bad'));
   }
+}
+
+function updateItemField(idx, field, value) {
+  appState.rows[idx][field] = value;
+  clearTimeout(samplingSaveTimer);
+  samplingSaveTimer = setTimeout(() => saveSamplingSession('draft', false), 1000);
 }
 
 function updateStokFisik(idx, value) {
