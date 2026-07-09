@@ -20,19 +20,19 @@ class SessionManager {
    * START NEW SESSION
    * Simpan info session baru
    */
-  startSession(warehouserName, totalItems, operatorName) {
+  startSession(warehouseName, totalItems, operatorName) {
     const session = {
       id: 'session_' + Date.now(),
-      warehouseName: warehouserName,
+      warehouseName: warehouseName,
       operatorName: operatorName,
       totalItems: totalItems,
       startTime: new Date().toISOString(),
       lastActivityTime: new Date().toISOString(),
-      status: 'ACTIVE', // ACTIVE, PAUSED, COMPLETED, INTERRUPTED
+      status: 'ACTIVE',
       itemsCompleted: 0,
       itemsRecount: 0,
       samplingData: [],
-      offlineQueue: [], // Queue untuk sync ke cloud saat online
+      offlineQueue: [],
     };
     
     localStorage.setItem(this.sessionKey, JSON.stringify(session));
@@ -66,7 +66,6 @@ class SessionManager {
       return false;
     }
 
-    // Struktur item data
     const sampledItem = {
       id: itemData.id || 'item_' + Date.now(),
       itemCode: itemData.itemCode,
@@ -76,25 +75,24 @@ class SessionManager {
       stokFisik: itemData.stokFisik,
       selisih: itemData.stokFisik - itemData.stokSystem,
       selisihPersen: ((itemData.stokFisik - itemData.stokSystem) / itemData.stokSystem * 100).toFixed(2),
-      status: itemData.status, // OK, RECOUNT, SUSPICIOUS
+      status: itemData.status,
       recountCount: itemData.recountCount || 0,
       recountHistory: itemData.recountHistory || [],
       notes: itemData.notes || '',
       timestamp: new Date().toISOString(),
-      synced: false, // Flag untuk tracking sync ke cloud
+      synced: false,
     };
 
     session.samplingData.push(sampledItem);
     session.itemsCompleted = session.samplingData.length;
     session.lastActivityTime = new Date().toISOString();
 
-    // Update recount count jika ada
     if (sampledItem.status === 'RECOUNT') {
       session.itemsRecount++;
     }
 
     localStorage.setItem(this.sessionKey, JSON.stringify(session));
-    this.addToOfflineQueue(sampledItem); // Masukkan ke queue offline
+    this.addToOfflineQueue(sampledItem);
     
     console.log('✅ Item #' + session.itemsCompleted + ' tersimpan:', itemData.itemCode);
     return true;
@@ -102,7 +100,6 @@ class SessionManager {
 
   /**
    * UPDATE LAST ITEM (untuk recount/edit)
-   * Perbarui data item terakhir
    */
   updateLastItem(itemData) {
     const session = this.getCurrentSession();
@@ -113,7 +110,6 @@ class SessionManager {
     const lastIndex = session.samplingData.length - 1;
     const lastItem = session.samplingData[lastIndex];
 
-    // Update recount history
     lastItem.recountHistory.push({
       attemptNumber: lastItem.recountCount + 1,
       previousValue: lastItem.stokFisik,
@@ -138,7 +134,6 @@ class SessionManager {
 
   /**
    * GET PROGRESS INFO
-   * Info untuk UI progress bar dan resume
    */
   getProgress() {
     const session = this.getCurrentSession();
@@ -167,7 +162,6 @@ class SessionManager {
 
   /**
    * RESUME SESSION
-   * Lanjut dari item terakhir
    */
   canResumeSession() {
     const session = this.getCurrentSession();
@@ -197,7 +191,6 @@ class SessionManager {
 
   /**
    * PAUSE SESSION
-   * Pause tanpa delete data
    */
   pauseSession() {
     const session = this.getCurrentSession();
@@ -213,7 +206,6 @@ class SessionManager {
 
   /**
    * COMPLETE SESSION
-   * Selesaikan dan siap untuk export
    */
   completeSession() {
     const session = this.getCurrentSession();
@@ -229,8 +221,7 @@ class SessionManager {
   }
 
   /**
-   * ABANDON SESSION (tidak selesai)
-   * Hapus session jika user keluar/error
+   * ABANDON SESSION
    */
   abandonSession() {
     localStorage.removeItem(this.sessionKey);
@@ -240,7 +231,7 @@ class SessionManager {
   }
 
   /**
-   * OFFLINE QUEUE - Simpan untuk sync nanti
+   * OFFLINE QUEUE
    */
   addToOfflineQueue(itemData) {
     let queue = JSON.parse(localStorage.getItem(this.progressKey)) || [];
@@ -262,12 +253,11 @@ class SessionManager {
 
   /**
    * SYNC DATA KE CLOUD
-   * Kirim offline queue ke server
    */
   async syncToCloud(cloudUrl, sessionData) {
     if (!navigator.onLine) {
       console.warn('⚠️ Masih offline, sync ditunda');
-      return { success: false, message: 'Offline - sync akan dilakukan saat online' };
+      return { success: false, message: 'Offline - sync akan dilakukan saat online', synced: 0 };
     }
 
     const queue = this.getOfflineQueue();
@@ -293,10 +283,8 @@ class SessionManager {
 
       const result = await response.json();
 
-      // Clear queue jika berhasil
       localStorage.removeItem(this.progressKey);
       
-      // Update session - mark items as synced
       const session = this.getCurrentSession();
       if (session) {
         session.samplingData.forEach(item => item.synced = true);
@@ -342,7 +330,6 @@ class SessionManager {
 
   /**
    * EXPORT DATA
-   * Siapkan data untuk export PDF/Excel
    */
   exportSessionData() {
     const session = this.getCurrentSession();
@@ -382,7 +369,7 @@ class SessionManager {
   }
 
   /**
-   * DEBUG: Print session info
+   * DEBUG
    */
   debugPrintSession() {
     const session = this.getCurrentSession();
@@ -394,5 +381,4 @@ class SessionManager {
   }
 }
 
-// Global instance
 window.sessionManager = new SessionManager();
