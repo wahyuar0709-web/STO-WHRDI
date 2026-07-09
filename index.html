@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RDI-STO">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -1316,6 +1317,18 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 const APP_NAME = 'RDI-STO';
 const APP_VERSION = '4.6';
 
+// Escape data sebelum disisipkan ke innerHTML — mencegah XSS dari nama gudang,
+// username operator, atau data hasil upload Excel yang bisa berisi karakter HTML.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
   const metaTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
@@ -1569,7 +1582,7 @@ function renderAccountsList() {
       <div class="acc-tile-top">
         <div class="acc-tile-icon"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12"/><path d="M4 21h16"/><path d="M9 21v-7h6v7"/></svg></div>
         <div class="acc-tile-info">
-          <div class="acc-tile-name">${acc.name}</div>
+          <div class="acc-tile-name">${escapeHtml(acc.name)}</div>
           <div class="acc-tile-sheet">${acc.sheetName}</div>
         </div>
         <button class="modal-close" onclick="deleteAccount('${acc.id}', event)" title="Hapus">
@@ -1917,20 +1930,20 @@ function renderSamplingList() {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <div style="display:flex;align-items:center;gap:8px;min-width:0">
             <div class="smp-idx-badge">${i + 1}</div>
-            <div style="font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r['Material Name'] || 'Item ' + (i + 1)}</div>
+            <div style="font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r['Material Name'] || 'Item ' + (i + 1))}</div>
           </div>
           <span id="smp-delta-${i}">${statusPill}</span>
         </div>
 
-        <div style="font-weight:800;font-size:16px;color:var(--tx);margin-top:7px;letter-spacing:.1px">${r['Material Code'] || '-'}</div>
-        <div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-top:2px">${r['Spesifikasi'] || '-'}</div>
+        <div style="font-weight:800;font-size:16px;color:var(--tx);margin-top:7px;letter-spacing:.1px">${escapeHtml(r['Material Code'] || '-')}</div>
+        <div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-top:2px">${escapeHtml(r['Spesifikasi'] || '-')}</div>
 
         <div class="smp-divider"></div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-          <div class="smp-info-chip"><div class="lbl">Batch</div><div class="val">${r['Batch'] || '-'}</div></div>
+          <div class="smp-info-chip"><div class="lbl">Batch</div><div class="val">${escapeHtml(r['Batch'] || '-')}</div></div>
           <div class="smp-info-chip"><div class="lbl">Tgl Datang</div><div class="val">${formatDateOnly(r['Tanggal Kedatangan'])}</div></div>
-          <div class="smp-info-chip"><div class="lbl">Qty Sistem</div><div class="val">${r.stokSistem} ${r['Unit'] || ''}</div></div>
+          <div class="smp-info-chip"><div class="lbl">Qty Sistem</div><div class="val">${r.stokSistem} ${escapeHtml(r['Unit'] || '')}</div></div>
         </div>
 
         <div class="smp-divider"></div>
@@ -2937,8 +2950,8 @@ function renderAdminUsers(users) {
   listEl.innerHTML = `<div class="list-card">` + users.map(u => `
     <div class="list-row" style="cursor:default">
       <div class="list-row-ic"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-      <div class="list-row-tx"><div class="t">${u.username}</div><div class="s">${u.role === 'admin' ? 'Admin' : 'Operator'}</div></div>
-      <button class="btn btn-secondary btn-sm" onclick="toggleAdminUserActive('${u.username}', ${!u.active})">${u.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
+      <div class="list-row-tx"><div class="t">${escapeHtml(u.username)}</div><div class="s">${u.role === 'admin' ? 'Admin' : 'Operator'}</div></div>
+      <button class="btn btn-secondary btn-sm" onclick="toggleAdminUserActive(${JSON.stringify(u.username).replace(/"/g, '&quot;')}, ${!u.active})">${u.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
     </div>`).join('') + `</div>`;
 }
 
