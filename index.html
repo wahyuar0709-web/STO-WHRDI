@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RDI-STO v4.5 — Warehouse Stock Taking</title>
+<title>RDI-STO v4.6 — Warehouse Stock Taking</title>
 <meta name="theme-color" content="#073E78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1292,6 +1292,18 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
           <svg class="ic" viewBox="0 0 24 24"><path d="M8 12.5l2.7 2.7L16.5 9"/></svg>Isi ke Stok Fisik
         </button>
       </div>
+
+      <!-- Mode 3: Item sama ditemukan tersebar di beberapa lokasi/batch -->
+      <button type="button" onclick="toggleMultiLoc()" style="background:none;border:none;color:var(--blue);font-size:11px;font-weight:700;padding:14px 0 0;cursor:pointer;width:100%;text-align:left">
+        Item ini ada di beberapa lokasi/batch? ▾
+      </button>
+      <div id="calc-multiloc" style="display:none;margin-top:8px;background:var(--bg);border-radius:var(--r-md);padding:10px">
+        <div style="font-size:10.5px;color:var(--tx3);margin-bottom:8px">Catat tiap lokasi/batch terpisah, totalnya otomatis dijumlah.</div>
+        <div id="calc-multiloc-rows"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addMultiLocRow()" style="width:100%;margin-top:4px">+ Tambah Baris</button>
+        <div style="text-align:right;margin-top:8px;font-size:12px;color:var(--blue-dk)">Total: <b id="calc-multiloc-total">0</b></div>
+        <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" onclick="applyMultiLocResult()">Isi Total ke Stok Fisik</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1302,7 +1314,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 <script>
 // ====== APP INFO (satu-satunya tempat ubah nama/versi aplikasi) ======
 const APP_NAME = 'RDI-STO';
-const APP_VERSION = '4.5';
+const APP_VERSION = '4.6';
 
 (function applyAppInfo() {
   document.title = `${APP_NAME} v${APP_VERSION} — Warehouse Stock Taking`;
@@ -1798,14 +1810,23 @@ function resumeSampling(sessionId) {
 //  unrecorded    : sistem = 0, fisik > 0 -> stok tidak tercatat di sistem, perlu investigasi
 //  criticalShort : sistem > 0, fisik = 0 -> kehilangan stok total, prioritas investigasi tertinggi
 function formatDateOnly(val) {
-  if (!val) return '-';
-  const s = String(val);
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    const [y, m, d] = s.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
+  if (val === null || val === undefined || val === '') return '-';
+  let d;
+  if (val instanceof Date) {
+    d = val;
+  } else if (typeof val === 'number' && isFinite(val)) {
+    // Serial tanggal Excel/Google Sheets (hari sejak 30 Des 1899)
+    d = new Date(Math.round((val - 25569) * 86400000));
+  } else {
+    const s = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const [y, m, dd] = s.slice(0, 10).split('-');
+      return `${dd}/${m}/${y}`;
+    }
+    d = new Date(s);
   }
-  const d2 = new Date(s);
-  return isNaN(d2) ? s.slice(0, 10) : d2.toLocaleDateString('id-ID');
+  if (!d || isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('id-ID');
 }
 
 function classifyVariance(fisik, sistem) {
@@ -2071,6 +2092,10 @@ function openCalcModal(idx) {
   document.getElementById('calc-pack-total').textContent = '0';
   document.getElementById('calc-pack-unit').textContent = r['Unit'] || '';
   calcNoteDraft = '';
+  multiLocRows = [];
+  document.getElementById('calc-multiloc').style.display = 'none';
+  document.getElementById('calc-multiloc-rows').innerHTML = '';
+  document.getElementById('calc-multiloc-total').textContent = '0';
   const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
   calcExpr = hasValue ? String(r.stokFisik) : '0';
   document.getElementById('calc-display').textContent = calcExpr;
@@ -2137,6 +2162,72 @@ function calcEquals() {
     calcExpr = '0';
     setTimeout(() => { const d = document.getElementById('calc-display'); if (d) d.textContent = '0'; }, 800);
   }
+}
+
+// Mode 3: item yang sama ditemukan tersebar di beberapa lokasi/batch (mis. 1 di Lokasi A, 1 di Lokasi B)
+let multiLocRows = [];
+
+function toggleMultiLoc() {
+  const el = document.getElementById('calc-multiloc');
+  const showing = el.style.display !== 'none';
+  if (!showing && multiLocRows.length === 0) {
+    const r = appState.rows[calcCurrentIdx];
+    multiLocRows.push({ lokasi: r['Lokasi'] || '', batch: r['Batch'] || '', qty: '' });
+    multiLocRows.push({ lokasi: '', batch: '', qty: '' });
+    renderMultiLocRows();
+  }
+  el.style.display = showing ? 'none' : 'block';
+}
+
+function renderMultiLocRows() {
+  const el = document.getElementById('calc-multiloc-rows');
+  el.innerHTML = multiLocRows.map((row, i) => `
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <input type="text" value="${row.lokasi}" placeholder="Lokasi" oninput="updateMultiLocRow(${i},'lokasi',this.value)"
+        style="flex:1;min-width:0;padding:7px 8px;border:1px solid var(--bdr);border-radius:8px;font-size:11px;background:#fff">
+      <input type="text" value="${row.batch}" placeholder="Batch" oninput="updateMultiLocRow(${i},'batch',this.value)"
+        style="flex:1;min-width:0;padding:7px 8px;border:1px solid var(--bdr);border-radius:8px;font-size:11px;background:#fff">
+      <input type="number" value="${row.qty}" placeholder="Qty" oninput="updateMultiLocRow(${i},'qty',this.value)"
+        style="width:56px;padding:7px 8px;border:1px solid var(--bdr);border-radius:8px;font-size:11px;background:#fff">
+      <button type="button" onclick="removeMultiLocRow(${i})" style="background:none;border:none;color:#DC2626;font-size:16px;padding:0 4px">×</button>
+    </div>`).join('');
+  updateMultiLocTotal();
+}
+
+function addMultiLocRow() {
+  multiLocRows.push({ lokasi: '', batch: '', qty: '' });
+  renderMultiLocRows();
+}
+
+function removeMultiLocRow(i) {
+  multiLocRows.splice(i, 1);
+  renderMultiLocRows();
+}
+
+function updateMultiLocRow(i, field, value) {
+  multiLocRows[i][field] = value;
+  updateMultiLocTotal();
+}
+
+function updateMultiLocTotal() {
+  const total = multiLocRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
+  document.getElementById('calc-multiloc-total').textContent = total;
+}
+
+function applyMultiLocResult() {
+  const validRows = multiLocRows.filter(r => r.qty !== '' && !isNaN(Number(r.qty)));
+  if (!validRows.length) { showToast('Isi minimal 1 baris dengan qty', 'error'); return; }
+  const total = validRows.reduce((sum, r) => sum + Number(r.qty), 0);
+  const idx = calcCurrentIdx;
+  const inputEl = document.getElementById(`smp-input-${idx}`);
+  if (inputEl) inputEl.value = total;
+  updateStokFisik(idx, total);
+  const note = validRows.map(r => `${r.lokasi || '?'}${r.batch ? '(' + r.batch + ')' : ''}: ${r.qty}`).join(' + ') + ` = ${total}`;
+  appState.rows[idx].calcNote = note;
+  const noteEl = document.getElementById(`smp-calcnote-${idx}`);
+  if (noteEl) noteEl.value = note;
+  closeCalcModal();
+  showToast(`Stok fisik diisi: ${total} (dari ${validRows.length} lokasi/batch)`, 'success');
 }
 
 function applyCalcResult(target) {
@@ -2392,9 +2483,20 @@ function handleExcelUpload(event) {
   reader.onload = (e) => {
     try {
       const XLSX = window.XLSX;
-      const workbook = XLSX.read(e.target.result, { type: 'array' });
+      const workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(firstSheet);
+
+      // Normalisasi kolom Tanggal Kedatangan ke format YYYY-MM-DD yang bersih & tidak ambigu,
+      // supaya tidak muncul "Invalid Date" di kartu/PDF akibat serial Excel atau format campuran.
+      data.forEach(row => {
+        const raw = row['Tanggal Kedatangan'];
+        if (raw === undefined || raw === null || raw === '') { row['Tanggal Kedatangan'] = ''; return; }
+        let d = raw instanceof Date ? raw : new Date(raw);
+        if (isNaN(d.getTime())) { row['Tanggal Kedatangan'] = ''; return; }
+        const pad = n => String(n).padStart(2, '0');
+        row['Tanggal Kedatangan'] = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      });
 
       const REQUIRED_COLS = ['Material Code', 'Material Name', 'Lokasi', 'Stok Inventory', 'Unit'];
       const missing = REQUIRED_COLS.filter(col => !Object.keys(data[0] || {}).includes(col));
