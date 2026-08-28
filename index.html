@@ -793,6 +793,9 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         <button class="btn" onclick="exportPdf()">
           <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M14 3v5h5"/><path d="M8 12h8M8 15.5h8M8 12v6.5M12 12v6.5M16 12v6.5"/></svg>Export PDF
         </button>
+        <button class="btn" onclick="exportExcel()">
+          <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M14 3v5h5"/><path d="M8 8h8M8 12h3M13 12h3M8 16h3M13 16h3"/></svg>Export Excel
+        </button>
       </div>
     </div>
   </main>
@@ -1630,6 +1633,7 @@ function renderHistoryList() {
         <div style="display:flex;gap:8px;margin-top:10px">
           ${s.status === 'draft' ? `<button class="btn btn-primary btn-sm" style="flex:1" onclick="continueHistorySession('${s.sessionId}')">Lanjutkan</button>` : ''}
           <button class="btn btn-secondary btn-sm" style="flex:1" onclick="exportHistorySessionPdf('${s.sessionId}')">Export PDF</button>
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="exportHistorySessionExcel('${s.sessionId}')">Export Excel</button>
         </div>
       </div>
     </div>`).join('');
@@ -1652,6 +1656,23 @@ function exportHistorySessionPdf(sessionId) {
       const backupRows = appState.rows;
       appState.rows = res.rows || [];
       exportPdf();
+      appState.rows = backupRows;
+    })
+    .catch(() => showToast('Gagal terhubung ke server', 'error'));
+}
+
+function exportHistorySessionExcel(sessionId) {
+  showToast('Menyiapkan Excel...', 'success');
+  fetch(appState.config.cloudSyncUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'loadSession', sessionId: sessionId, token: appState.auth.token })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) { showToast(res.error || 'Gagal memuat sesi', 'error'); return; }
+      const backupRows = appState.rows;
+      appState.rows = res.rows || [];
+      exportExcel();
       appState.rows = backupRows;
     })
     .catch(() => showToast('Gagal terhubung ke server', 'error'));
@@ -2948,6 +2969,36 @@ function confirmAndUploadExcel() {
 }
 
 // ====== EXPORT PDF (SAMPLING STO) — Laporan STO standar manufaktur ======
+function buildStoExportRows(rows) {
+  return rows.map((r, i) => {
+    const sistem = Number(r.stokSistem) || 0;
+    const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
+    let selisih = '-', variancePercent = null, status = 'pending', needRecount = false;
+    if (hasValue) {
+      const c = classifyVariance(Number(r.stokFisik), sistem);
+      selisih = c.selisih;
+      variancePercent = c.variancePercent;
+      status = c.status;
+      needRecount = c.needRecount;
+    }
+    return {
+      no: i + 1,
+      kode: r['Material Code'] || '',
+      nama: r['Material Name'] || '',
+      spesifikasi: r['Spesifikasi'] || '-',
+      tglDatang: formatDateOnly(r['Tanggal Kedatangan']),
+      lokasi: r['Lokasi'] || '',
+      batch: r['Batch'] || '',
+      supplier: r['Supplier'] || '-',
+      unit: r['Unit'] || '',
+      sistem,
+      fisik: hasValue ? Number(r.stokFisik) : '-',
+      caraHitung: r.calcNote || '-',
+      selisih, variancePercent, status, needRecount
+    };
+  });
+}
+
 function exportPdf() {
   if (!appState.currentAccount) {
     showToast('Pilih gudang terlebih dahulu', 'error');
@@ -2979,33 +3030,7 @@ function exportPdf() {
     pending:       { label: 'Belum',        color: [152, 165, 184] }
   };
 
-  const enriched = rows.map((r, i) => {
-    const sistem = Number(r.stokSistem) || 0;
-    const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
-    let selisih = '-', variancePercent = null, status = 'pending', needRecount = false;
-    if (hasValue) {
-      const c = classifyVariance(Number(r.stokFisik), sistem);
-      selisih = c.selisih;
-      variancePercent = c.variancePercent;
-      status = c.status;
-      needRecount = c.needRecount;
-    }
-    return {
-      no: i + 1,
-      kode: r['Material Code'] || '',
-      nama: r['Material Name'] || '',
-      spesifikasi: r['Spesifikasi'] || '-',
-      tglDatang: formatDateOnly(r['Tanggal Kedatangan']),
-      lokasi: r['Lokasi'] || '',
-      batch: r['Batch'] || '',
-      supplier: r['Supplier'] || '-',
-      unit: r['Unit'] || '',
-      sistem,
-      fisik: hasValue ? Number(r.stokFisik) : '-',
-      caraHitung: r.calcNote || '-',
-      selisih, variancePercent, status, needRecount
-    };
-  });
+  const enriched = buildStoExportRows(rows);
 
   const total = enriched.length;
   const filled = enriched.filter(r => r.status !== 'pending').length;
@@ -3283,6 +3308,82 @@ function exportPdf() {
 
   doc.save(`STO_${acc.sheetName}_${new Date().toISOString().slice(0, 10)}.pdf`);
   showToast('PDF berhasil diexport', 'success');
+}
+
+function exportExcel() {
+  if (!appState.currentAccount) {
+    showToast('Pilih gudang terlebih dahulu', 'error');
+    showPage('page-accounts');
+    return;
+  }
+
+  const rows = appState.rows || [];
+  if (!rows.length) {
+    showToast('Belum ada data sampling untuk diexport', 'error');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    showToast('Library Excel gagal dimuat', 'error');
+    return;
+  }
+
+  const acc = appState.currentAccount;
+  const statusLabel = {
+    match: 'Sesuai',
+    minor: 'Toleransi',
+    major: 'ULANG!',
+    unrecorded: 'Tak Tercatat',
+    criticalShort: 'HILANG!',
+    pending: 'Belum'
+  };
+
+  const enriched = buildStoExportRows(rows);
+  const total = enriched.length;
+  const filled = enriched.filter(r => r.status !== 'pending').length;
+  const matchCount = enriched.filter(r => r.status === 'match').length;
+  const minorCount = enriched.filter(r => r.status === 'minor').length;
+  const majorCount = enriched.filter(r => r.needRecount).length;
+  const ira = filled > 0 ? Math.round(((matchCount + minorCount) / filled) * 1000) / 10 : 100;
+
+  const aoa = [
+    [appState.config.company || APP_NAME],
+    ['Laporan Stock Take Opname (STO)'],
+    [],
+    ['Gudang', `${acc.name || '-'} (${acc.sheetName || '-'})`, '', 'Tanggal STO', new Date().toLocaleDateString('id-ID')],
+    ['Operator', appState.config.username || '-', '', 'Toleransi Selisih', `${appState.config.tolerancePercent || 2}%`],
+    [],
+    ['No', 'Kode Material', 'Nama Material', 'Spesifikasi', 'Tgl Kedatangan', 'Lokasi', 'Batch', 'Supplier', 'Unit', 'Stok Sistem', 'Stok Fisik', 'Selisih', 'Selisih %', 'Cara Hitung', 'Status']
+  ];
+
+  enriched.forEach(r => {
+    aoa.push([
+      r.no, r.kode, r.nama, r.spesifikasi, r.tglDatang, r.lokasi, r.batch, r.supplier, r.unit,
+      r.sistem, r.fisik, r.selisih, r.variancePercent === null ? '-' : r.variancePercent,
+      r.caraHitung, statusLabel[r.status] || r.status
+    ]);
+  });
+
+  aoa.push([]);
+  aoa.push(['Ringkasan']);
+  aoa.push(['Total Item', total]);
+  aoa.push(['Terisi', filled]);
+  aoa.push(['Sesuai', matchCount]);
+  aoa.push(['Toleransi', minorCount]);
+  aoa.push(['Perlu Ulang', majorCount]);
+  aoa.push(['IRA (%)', ira]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 5 }, { wch: 16 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 12 },
+    { wch: 12 }, { wch: 16 }, { wch: 8 }, { wch: 11 }, { wch: 11 }, { wch: 10 },
+    { wch: 10 }, { wch: 20 }, { wch: 13 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'STO');
+  XLSX.writeFile(wb, `STO_${acc.sheetName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast('Excel berhasil diexport', 'success');
 }
 
 // ====== ADMIN: KELOLA OPERATOR ======
