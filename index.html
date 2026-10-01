@@ -706,7 +706,7 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
         <div class="acc-bar-dot" style="background:var(--blue)"></div>
         <div class="acc-bar-info"><div class="acc-bar-name" id="history-acc-name">Belum pilih gudang</div></div>
       </div>
-      <input type="text" id="history-search" placeholder="Cari tanggal/operator/status..." oninput="renderHistoryList()"
+      <input type="text" id="history-search" placeholder="Cari tanggal/operator/status..." oninput="debouncedRenderHistory()"
         style="width:100%;margin:10px 0;padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:16px">
       <div id="history-list"></div>
     </div>
@@ -774,9 +774,9 @@ main{flex:1;padding:16px 16px 108px;position:relative;z-index:1}
 
         <div id="sampling-save-status" style="margin-bottom:10px"></div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
-          <input type="text" id="smp-search" placeholder="Cari kode/nama/spesifikasi..." oninput="renderSamplingList()"
+          <input type="text" id="smp-search" placeholder="Cari kode/nama/spesifikasi..." oninput="onSamplingSearchInput()"
             style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:16px">
-          <select id="smp-filter-lokasi" onchange="renderSamplingList()"
+          <select id="smp-filter-lokasi" onchange="smpRenderLimit=SMP_PAGE;renderSamplingList()"
             style="padding:9px 10px;border:1px solid var(--bdr);border-radius:10px;font-size:16px;max-width:130px">
             <option value="">Semua Lokasi</option>
           </select>
@@ -1430,6 +1430,7 @@ function enterSamplingPage() {
 }
 
 function refreshSamplingVisibility() {
+  if (document.hidden) return; // tab di background -> jangan polling
   if (!appState.currentAccount || !appState.config.cloudSyncUrl) return;
   const myUsername = appState.config.username || appState.auth.username || '';
   const isAdmin = appState.auth.role === 'admin';
@@ -1780,14 +1781,30 @@ function computeIRA(rows) {
   return { ira, needRecount, counted };
 }
 
+let _lokasiSig = '';
 function populateLokasiFilter(rows) {
   const sel = document.getElementById('smp-filter-lokasi');
   if (!sel) return;
   const cur = sel.value;
   const locs = [...new Set(rows.map(r => r['Lokasi']).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">Semua Lokasi</option>' + locs.map(l => `<option value="${l}">${l}</option>`).join('');
+  const sig = locs.join('\u0001');
+  if (sig === _lokasiSig && sel.options.length === locs.length + 1) return; // daftar lokasi tidak berubah -> lewati rebuild
+  _lokasiSig = sig;
+  sel.innerHTML = '<option value="">Semua Lokasi</option>' + locs.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
   if (locs.includes(cur)) sel.value = cur;
 }
+
+// ---- Debounce & batas render (performa daftar besar)
+function debounce(fn, ms) {
+  let t = null;
+  return function (...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); };
+}
+const SMP_PAGE = 80;           // jumlah grup material yang dirender per tahap
+let smpRenderLimit = SMP_PAGE;
+const _debouncedSamplingRender = debounce(() => renderSamplingList(), 200);
+function onSamplingSearchInput() { smpRenderLimit = SMP_PAGE; _debouncedSamplingRender(); }
+const debouncedRenderHistory = debounce(() => renderHistoryList(), 200);
+function loadMoreSampling() { smpRenderLimit += SMP_PAGE; renderSamplingList(); }
 
 let expandedGroups = new Set(); // kode material yg lagi di-expand (semua item, bukan cuma yg multi lokasi)
 
@@ -1829,7 +1846,13 @@ function renderSamplingList() {
     groups.get(code).push(entry);
   });
 
-  el.innerHTML = [...groups.values()].map((group, gi) => renderGroupRow(group, gi + 1)).join('');
+  const allGroups = [...groups.values()];
+  const shown = allGroups.slice(0, smpRenderLimit);
+  let html = shown.map((group, gi) => renderGroupRow(group, gi + 1)).join('');
+  if (allGroups.length > shown.length) {
+    html += `<div style="padding:10px 8px 16px"><button type="button" class="btn btn-secondary" style="width:100%" onclick="loadMoreSampling()">Muat ${Math.min(SMP_PAGE, allGroups.length - shown.length)} lagi (${shown.length} dari ${allGroups.length} item)</button></div>`;
+  }
+  el.innerHTML = html;
 }
 
 function groupDomId(code) {
@@ -1878,7 +1901,8 @@ function renderGroupRow(group, num) {
             <span style="font-weight:800;font-size:15px;color:var(--tx)">${escapeHtml(code || '-')}</span>
             ${locBadge}
           </div>
-          <div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(group[0].r['Spesifikasi'] || '-')}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(group[0].r['Material Name'] || '-')}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(group[0].r['Spesifikasi'] || '-')}${!isMulti && group[0].r['Batch'] ? ' · Batch ' + escapeHtml(group[0].r['Batch']) : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <span id="smp-ghead-${groupDomId(code)}">${headBadge}</span>
@@ -2076,7 +2100,7 @@ function refreshItemBadge(idx) {
   const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
   const deltaEl = document.getElementById(`smp-delta-${idx}`);
   const recountEl = document.getElementById(`smp-recount-${idx}`);
-  const cardEl = document.getElementById(`smp-card-${idx}`);
+  const cardEl = null; // (id smp-card-* tidak ada lagi di layout grup)
   if (!hasValue) {
     if (deltaEl) deltaEl.innerHTML = `<span class="status-pill" style="background:var(--bg);color:var(--tx3);border:1.5px dashed var(--bdr)">⏳ Belum Diisi</span>`;
     if (recountEl) recountEl.innerHTML = '';
@@ -2124,6 +2148,11 @@ function refreshItemBadge(idx) {
     if (gcardEl) gcardEl.style.borderLeftColor = borderColor;
   }
 
+  scheduleIraRefresh();
+}
+
+// IRA butuh memindai semua baris -> jangan di setiap digit; cukup setelah jeda singkat.
+const scheduleIraRefresh = debounce(() => {
   const rows = appState.rows || [];
   const { ira, needRecount } = computeIRA(rows);
   const iraEl = document.getElementById('smp-ira');
@@ -2133,7 +2162,7 @@ function refreshItemBadge(idx) {
     iraCard.classList.remove('ira-good', 'ira-warn', 'ira-bad');
     iraCard.classList.add(ira >= 98 ? 'ira-good' : (ira >= 90 ? 'ira-warn' : 'ira-bad'));
   }
-}
+}, 250);
 
 function toggleDetail(idx) {
   const el = document.getElementById(`smp-detail-${idx}`);
@@ -2143,7 +2172,7 @@ function toggleDetail(idx) {
 function updateItemField(idx, field, value) {
   appState.rows[idx][field] = value;
   clearTimeout(samplingSaveTimer);
-  samplingSaveTimer = setTimeout(() => saveSamplingSession('draft', false), 1000);
+  samplingSaveTimer = setTimeout(() => saveSamplingSession('draft', false), 1500);
 }
 
 function saveItemNow(idx) {
@@ -2157,6 +2186,8 @@ function saveItemNow(idx) {
   }, 400);
 }
 
+function hasStokValue(v) { return v !== '' && v !== undefined && v !== null; }
+
 function updateStokFisik(idx, value) {
   if (value !== '' && Number(value) < 0) {
     value = '0';
@@ -2164,16 +2195,20 @@ function updateStokFisik(idx, value) {
     if (el) el.value = '0';
     showToast('Stok fisik tidak boleh negatif', 'error');
   }
+  const _had = hasStokValue(appState.rows[idx].stokFisik);
   appState.rows[idx].stokFisik = value === '' ? '' : Number(value);
-  document.getElementById('smp-filled').textContent =
-    appState.rows.filter(r => r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null).length;
+  const _has = hasStokValue(appState.rows[idx].stokFisik);
+  if (_had !== _has) {   // counter inkremental, tanpa memindai seluruh rows
+    const fe = document.getElementById('smp-filled');
+    if (fe) fe.textContent = Math.max(0, (Number(fe.textContent) || 0) + (_has ? 1 : -1));
+  }
   refreshItemBadge(idx);
 
   clearTimeout(samplingSaveTimer);
   samplingSaveTimer = setTimeout(() => {
     saveSamplingSession('draft', false);
     notifyIfBadVariance(idx);
-  }, 1000);
+  }, 1500);
 }
 
 // Notifikasi TEGAS (toast, bukan cuma badge warna di kartu) kalau hasil hitung
@@ -2193,6 +2228,49 @@ function notifyIfBadVariance(idx) {
   showToast(`⚠️ ${kode}: ${detail} — wajib hitung ulang`, 'error');
 }
 
+// ---- Antrian simpan tunggal: maksimal 1 request in-flight + 1 pending (yang terbaru menang).
+// Mencegah request lambat menimpa data yang lebih baru, dan membatasi beban ke backend.
+const _classMemo = new WeakMap();
+const CLOUD_TIMEOUT_MS = 15000;
+let _cloudInFlight = false;
+let _cloudPending = null; // { payload, resolvers: [] }
+
+function fetchJsonTimeout(url, body, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms || CLOUD_TIMEOUT_MS);
+  return fetch(url, { method: 'POST', body, signal: ctrl.signal })
+    .then(r => r.json())
+    .finally(() => clearTimeout(t));
+}
+
+function sendSessionQueued(payload) {
+  return new Promise(resolve => {
+    if (_cloudInFlight) {
+      if (_cloudPending && _cloudPending.payload.status !== 'draft' && payload.status === 'draft') {
+        _cloudPending.resolvers.push(resolve); // jangan timpa status final dgn draft
+      } else {
+        _cloudPending = { payload, resolvers: [...(_cloudPending ? _cloudPending.resolvers : []), resolve] };
+      }
+      return;
+    }
+    _runCloudSend(payload, [resolve]);
+  });
+}
+
+function _runCloudSend(payload, resolvers) {
+  _cloudInFlight = true;
+  fetchJsonTimeout(appState.config.cloudSyncUrl, JSON.stringify(payload))
+    .then(data => resolvers.forEach(f => f(data)))
+    .catch(() => resolvers.forEach(f => f({ ok: false, offline: true })))
+    .finally(() => {
+      _cloudInFlight = false;
+      if (_cloudPending) {
+        const p = _cloudPending; _cloudPending = null;
+        _runCloudSend(p.payload, p.resolvers);
+      }
+    });
+}
+
 function saveSamplingSession(status, silent) {
   if (!appState.sessionId || !appState.currentAccount || !appState.config.cloudSyncUrl) return Promise.resolve({ ok: false });
   const statusEl = document.getElementById('sampling-save-status');
@@ -2203,7 +2281,13 @@ function saveSamplingSession(status, silent) {
   const enrichedRows = (appState.rows || []).map(r => {
     const hasValue = r.stokFisik !== '' && r.stokFisik !== undefined && r.stokFisik !== null;
     if (!hasValue) return { ...r, selisih: '', variancePercent: '', status: 'pending', needRecount: false };
-    const c = classifyVariance(Number(r.stokFisik), Number(r.stokSistem));
+    // memo klasifikasi per baris: hitung ulang hanya bila stokFisik/stokSistem berubah
+    let m = _classMemo.get(r);
+    if (!m || m.f !== r.stokFisik || m.s !== r.stokSistem) {
+      m = { f: r.stokFisik, s: r.stokSistem, c: classifyVariance(Number(r.stokFisik), Number(r.stokSistem)) };
+      _classMemo.set(r, m);
+    }
+    const c = m.c;
     return { ...r, selisih: c.selisih, variancePercent: c.variancePercent, status: c.status, needRecount: c.needRecount };
   });
 
@@ -2230,13 +2314,13 @@ function saveSamplingSession(status, silent) {
 
   // 2) Coba kirim ke cloud seperti biasa. Return promise-nya supaya caller
   //    (mis. finishSampling) bisa MENUNGGU konfirmasi sukses sebelum lanjut.
-  return fetch(appState.config.cloudSyncUrl, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
+  return sendSessionQueued(payload)
   .then(data => {
-    if (data.ok) StoLocalDB.markSynced(appState.sessionId).catch(() => {});
+    if (data && data.ok) StoLocalDB.markSynced(appState.sessionId).catch(() => {});
+    if (data && data.offline) {
+      if (statusEl) statusEl.innerHTML = `<div class="settings-status error">${SVG.error}<span>Tersimpan lokal, akan disinkron ulang saat online</span></div>`;
+      return data;
+    }
     if (statusEl) {
       if (data.ok) statusEl.innerHTML = `<div class="settings-status success" style="font-size:11px">${SVG.check}<span>Tersimpan ${new Date().toLocaleTimeString('id-ID')}</span></div>`;
       else statusEl.innerHTML = `<div class="settings-status error">${SVG.error}<span>Gagal simpan: ${data.error}</span></div>`;
@@ -2256,13 +2340,15 @@ function saveSamplingSession(status, silent) {
 let stoFlushInFlight = false;
 async function flushPendingStoSessions() {
   if (stoFlushInFlight || !appState.config.cloudSyncUrl) return;
+  if (document.hidden || !navigator.onLine) return; // tidak ada gunanya saat background/offline
   stoFlushInFlight = true;
   try {
     const pending = await StoLocalDB.getAllPending();
     for (const rec of pending) {
       try {
-        const r = await fetch(appState.config.cloudSyncUrl, { method: 'POST', body: JSON.stringify(rec.payload) });
-        const data = await r.json();
+        // sesi aktif sedang ditangani antrian simpan -> jangan balapan dgn data lama
+        if (rec.sessionId === appState.sessionId && (_cloudInFlight || _cloudPending)) continue;
+        const data = await fetchJsonTimeout(appState.config.cloudSyncUrl, JSON.stringify(rec.payload));
         if (data.ok) await StoLocalDB.markSynced(rec.sessionId);
       } catch (e) { /* masih offline, coba lagi nanti */ }
     }
@@ -2271,6 +2357,9 @@ async function flushPendingStoSessions() {
   }
 }
 window.addEventListener('online', flushPendingStoSessions);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { flushPendingStoSessions(); if (typeof samplingVisibilityTimer !== 'undefined' && samplingVisibilityTimer) refreshSamplingVisibility(); }
+});
 
 // ====== INDIKATOR KONEKSI PROAKTIF ======
 // Beda dari status simpan (yang cuma muncul REAKTIF setelah gagal fetch), ini
